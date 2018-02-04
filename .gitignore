@@ -1,0 +1,8 @@
+auth.ini
+__pycache__
+logs
+*test.py
+users
+users.ini
+!/TEMPLATE/*
+unused
