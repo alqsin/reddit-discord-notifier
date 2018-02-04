@@ -39,8 +39,11 @@ def read_config_as_list(file):
 	return config_list
 
 def add_path_to_file(filename):
-	if not os.path.exists(os.path.dirname(filename)):
-		os.makedirs(os.path.dirname(filename))
+	dir_to_file = os.path.dirname(filename)
+	if not dir_to_file:
+		return
+	if not os.path.exists(dir_to_file):
+		os.makedirs(dir_to_file)
 
 # figure out a scheme so that the main methods know when reading/writing failed
 def safe_write_config(file,config):
