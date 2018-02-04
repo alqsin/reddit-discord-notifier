@@ -56,6 +56,7 @@ def safe_write_config(file,config):
 	os.rename(file+' temp',file)
 
 def safe_write_config_no_undo(file,config):
+	add_path_to_file(file)
 	with open(file+' temp','w') as config_file:
 		config.write(config_file)
 	os.replace(file+' temp',file)
@@ -113,4 +114,7 @@ def add_named_config_item(file,new_item,new_item_name):
 def create_config_file(file):
 	if os.path.exists(file):
 		raise ValueError("File already exists.")
+	add_path_to_file(file)
 	open(file,'a').close()
+
+# adding paths is ugly, clean up later
