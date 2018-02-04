@@ -8,10 +8,7 @@ def notification_to_str(notification):
 	return "Subreddit: /r/{}\nType: {}\nQuery: {}\n".format(notification['sub'],notification['type'],notification['query'])
 
 def get_user_path(user):
-	user_path = 'users/'+str(user)
-	#if not os.path.exists(user_path):
-	#	return None
-	return user_path
+	return os.path.join('users',str(user))
 
 # probably want to validate subreddit before adding
 def add_notification(text,user):
@@ -88,7 +85,7 @@ def transform_user_to_sub(notification,user):
 	notification['user'] = os.path.basename(user)
 	return notification
 
-def get_all_notifications(path='users/'):
+def get_all_notifications(path='users'):
 	notification_files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f))]
 	notification_dict = {}
 	for file in notification_files:

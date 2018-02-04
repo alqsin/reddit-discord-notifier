@@ -28,7 +28,7 @@ client = discord.Client()
 # TODO: change ! commands to reflect the bot name
 # TODO: add comments
 
-def initialize_logging(logger_name):
+def initialize_logger(logger_name):
 	log_file = os.path.join(log_dir,logger_name+'.log')
 	log = logging.getLogger(logger_name)
 	log_fh = logging.FileHandler(log_file)
@@ -217,8 +217,8 @@ async def on_message(message):
 			# here we want to message the admin or something
 			# also should probably add a validation making sure admin is in the discord server
 
-main_log = initialize_logging('discord_bot')
-reddit_log = initialize_logging('reddit')
+main_log = initialize_logger('discord_bot')
+reddit_log = initialize_logger('reddit')
 
 client.loop.create_task(check_notifications_periodically())
 client.run(get_discord_token())

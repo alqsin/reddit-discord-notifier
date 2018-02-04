@@ -38,9 +38,17 @@ def read_config_as_list(file):
 		config_list.append(curr_entry)
 	return config_list
 
+def add_path_to_file(filename):
+	if not os.path.exists(os.path.dirname(filename)):
+		os.makedirs(os.path.dirname(filename))
+
 # figure out a scheme so that the main methods know when reading/writing failed
 def safe_write_config(file,config):
 	path_to_old = get_path_to_old(file)
+
+	# makes sure you can write to the places you want to write to
+	add_path_to_file(file)
+	add_path_to_file(path_to_old)
 
 	with open(file+' temp','w') as config_file:
 		config.write(config_file)
@@ -52,11 +60,9 @@ def safe_write_config_no_undo(file,config):
 		config.write(config_file)
 	os.replace(file+' temp',file)
 
-def get_path_to_old(file):
+def get_path_to_old(filename):
 	'''Adds /old/ to the path to file'''
-	list_to_old = file.split("/")
-	list_to_old.insert(len(list_to_old)-1,"old")
-	return "/".join(list_to_old)
+	return os.path.join(os.path.dirname(filename),'old',os.path.basename(filename))
 
 # TODO: store several copies and have undo strictly go backwards
 def revert_previous_write(file):
