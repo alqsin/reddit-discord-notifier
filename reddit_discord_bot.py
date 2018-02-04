@@ -18,15 +18,15 @@ client = discord.Client()
 # TODO: create 'community' mode that has subreddit-based channels and pings users (and keeps user-based lists still)
 # TODO: (reddit_fetcher) fix search queries
 # TODO: initialization of a user should delete the previous notifications list probably
-# TODO: (notifications_handler) old/ directory should be created if it doesn't exist when writing
-# TODO: store logs once a day
+# TODO: rotate logs (rotatingfilehandler?)
 # TODO: store more data <--- wtf is this supposed to mean
 # TODO: better way of handling commands? discord.py has default method?
 # TODO: welcome message (on startup + for new users)
-# TODO: remove user function <-- what did I mean by this
+# TODO: remove user function <-- what did I mean by this?
 # TODO: have settings by server?
 # TODO: change ! commands to reflect the bot name
 # TODO: add comments
+# TODO: add console output for warnings
 
 def initialize_logger(logger_name):
 	log_file = os.path.join(log_dir,logger_name+'.log')
