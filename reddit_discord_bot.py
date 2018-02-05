@@ -139,16 +139,18 @@ async def run_general_command(message):
 
 async def message_user(channel_id,message_text):
 	'''sends a message to a user via channel, which should be their user id'''
-	message_to_send = ""
-	user = await client.get_user_info(channel_id)
-	if user is not None:
-		message_to_send += user.mention + '\n'
-	message_to_send += message_text
 	channel = client.get_channel(channel_id)
 	if channel is None:
 		logging.error("Failed to get channel with id {}".format(channel_id))
 		return 0
-	await client.send_message(client.get_channel(channel_id),message_to_send)
+	message_to_send = ""
+	try:
+		user = await client.get_user_info(channel.name)  # going to have to change this when updating structure
+		message_to_send += user.mention + '\n'
+	except NotFound as e:
+		logging.error("No user matching channel name {}.".format(channel.name))
+	message_to_send += message_text
+	await client.send_message(channel,message_to_send)
 	return 0
 
 async def initialize_user(user_name,server):
