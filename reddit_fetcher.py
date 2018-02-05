@@ -5,6 +5,9 @@ import re
 import settings_io
 import shlex  # for splitting with quoted substring
 
+import logging
+log = logging.getLogger()
+
 class RedditPost:
 	'''structure of a reddit post'''
 	def __init__(self,post_id,post_title,post_time,post_url,post_author):  # wow this is so wordy
@@ -98,6 +101,7 @@ def check_one_subreddit(subreddit_name,notifications,reddit,start_time,end_time)
 			else:
 				raise ValueError("Invalid search type for subreddit {}".format(notification.subreddit_name))
 			if curr_match:
+				logging.info("Found notification for post {}".format(post.post_title))
 				tuple_to_add = (notification['user'],post)
 				if tuple_to_add not in notifications_to_send:
 					notifications_to_send.append(tuple_to_add)

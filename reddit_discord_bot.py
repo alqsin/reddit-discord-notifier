@@ -1,8 +1,4 @@
-import discord
 import asyncio
-import settings_io
-import notifications_handler as notif
-import reddit_fetcher as rdt
 from datetime import datetime,timedelta
 import os
 
@@ -12,14 +8,18 @@ if not os.path.exists(log_dir):
 		os.makedirs(log_dir)
 logging.basicConfig(level=logging.INFO,format='%(asctime)s [%(levelname)s] - %(message)s',filename=os.path.join(log_dir,'default_log.log'))
 
+import discord
+import settings_io
+import notifications_handler as notif
+import reddit_fetcher as rdt
+
 client = discord.Client()
 
 # TODO: add initialization method that sets admin, creates necessary folder structure, etc.
 # TODO: create 'community' mode that has subreddit-based channels and pings users (and keeps user-based lists still)
-# TODO: (reddit_fetcher) fix search queries
 # TODO: initialization of a user should delete the previous notifications list probably
 # TODO: rotate logs (rotatingfilehandler?)
-# TODO: store more data <--- wtf is this supposed to mean
+# TODO: add more stuff to reddit_post, e.g. the description text
 # TODO: better way of handling commands? discord.py has default method?
 # TODO: welcome message (on startup + for new users)
 # TODO: remove user function <-- what did I mean by this?
@@ -27,17 +27,21 @@ client = discord.Client()
 # TODO: change ! commands to reflect the bot name
 # TODO: add comments
 # TODO: add console output for warnings
+# TODO: prevent the same alert from being added twice
+# TODO: validate discord messages being sent (limits, valid characters, etc.)
+# TODO: stop it from checking for notifications before the reddit bot is initialized (or set start_time to a little later)
+# TODO: implement checking by post-id, as if the post is 'invisible' during the first few minutes after it is posted it will be ignored
 
-def initialize_logger(logger_name):
-	log_file = os.path.join(log_dir,logger_name+'.log')
-	log = logging.getLogger(logger_name)
-	log_fh = logging.FileHandler(log_file)
-	log_fh.setLevel(logging.INFO)
-	log_fmt = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s')
-	log_fh.setFormatter(log_fmt)
-	log.addHandler(log_fh)
-	log.propagate = False
-	return log
+# def initialize_logger(logger_name):
+# 	log_file = os.path.join(log_dir,logger_name+'.log')
+# 	log = logging.getLogger(logger_name)
+# 	log_fh = logging.FileHandler(log_file)
+# 	log_fh.setLevel(logging.INFO)
+# 	log_fmt = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s')
+# 	log_fh.setFormatter(log_fmt)
+# 	log.addHandler(log_fh)
+# 	log.propagate = False
+# 	return log
 
 def get_discord_auth():
 	AUTH_FILE = 'auth.ini'
@@ -118,7 +122,7 @@ async def run_general_command(message):
 	if command == '!stop':
 		if str(message.author) == get_discord_admin():
 			await client.send_message(message.channel,'See you later!')
-			main_log.info("Shutting down.")
+			logging.info("Shutting down.")
 			await client.close()
 			exit()
 		else:
@@ -139,13 +143,13 @@ async def run_general_command(message):
 async def message_user(channel_id,message_text):
 	'''sends a message to a user via channel, which should be their user id'''
 	message_to_send = ""
-	user = client.get_user_info(channel_id)
+	user = await client.get_user_info(channel_id)
 	if user is not None:
 		message_to_send += user.mention + '\n'
 	message_to_send += message_text
 	channel = client.get_channel(channel_id)
 	if channel is None:
-		main_log.error("Failed to get channel with id {}".format(channel_id))
+		logging.error("Failed to get channel with id {}".format(channel_id))
 		return 0
 	await client.send_message(client.get_channel(channel_id),message_to_send)
 	return 0
@@ -169,7 +173,7 @@ async def test(message):
 
 @client.event
 async def on_ready():
-	reddit_log.info("Hello")
+	logging.info("Hello")
 	print('Logged in as')
 	print(client.user.name)
 	print(client.user.id)
@@ -189,13 +193,13 @@ async def check_notifications_periodically():
 				try:
 					to_send = rdt.check_one_subreddit(curr_sub,all_notifications[curr_sub],praw_instance,start_time,end_time)
 				except Exception as e:
-					reddit_log.exception("Failure to get reddit posts for {}.".format(curr_sub))
+					logging.exception("Failure to check reddit posts for {}.".format(curr_sub))
 			if to_send:
 				for curr_to_send in to_send:
 					await message_user(notif.get_user_channel_id(curr_to_send[0]),"**New reddit post matching your alert!**\n{}".format(str(curr_to_send[1])))
-			reddit_log.info("Checked notifications until {}".format(end_time.strftime('%Y-%m-%d %H:%M:%S')))
+			logging.info("Checked notifications from {} to {}".format(start_time.strftime('%Y-%m-%d %H:%M:%S'),end_time.strftime('%Y-%m-%d %H:%M:%S')))
 		except Exception as e:
-			main_log.exception("Issue checking notifications.")
+			logging.exception("Issue checking notifications.")
 		start_time = end_time
 		await asyncio.sleep(60)  # later will change this to be based on timestamp instead of just sleeping for 60s I guess
 
@@ -212,13 +216,13 @@ async def on_message(message):
 			else:
 				await client.send_message(message.channel,result)
 		except Exception as e:
-			main_log.exception("Issue running ! command.")
+			logging.exception("Issue running ! command.")
 			await client.send_message(message.channel,"Error occurred, please PM someone complaining about this.")
 			# here we want to message the admin or something
 			# also should probably add a validation making sure admin is in the discord server
 
-main_log = initialize_logger('discord_bot')
-reddit_log = initialize_logger('reddit')
+#main_log = initialize_logger('discord_bot')
+#reddit_log = initialize_logger('reddit')
 
 client.loop.create_task(check_notifications_periodically())
 client.run(get_discord_token())
