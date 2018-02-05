@@ -69,7 +69,7 @@ def get_reddit_posts(subreddit_name,reddit,start_time,end_time):
 	new_submissions = []
 
 	for submission in subreddit.new(limit=NUMBER_NEW_TO_GET):
-		post_time = get_time_from_stamp(submission.created) #submission.created returns timestamp in utc
+		post_time = get_time_from_stamp(submission.created_utc) #submission.created returns timestamp in utc
 		post_title = submission.title
 		post_id = submission.fullname
 		post_author = submission.author

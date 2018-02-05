@@ -31,6 +31,7 @@ client = discord.Client()
 # TODO: validate discord messages being sent (limits, valid characters, etc.)
 # TODO: stop it from checking for notifications before the reddit bot is initialized (or set start_time to a little later)
 # TODO: implement checking by post-id, as if the post is 'invisible' during the first few minutes after it is posted it will be ignored
+# TODO: add (optional) pushover integration
 
 # def initialize_logger(logger_name):
 # 	log_file = os.path.join(log_dir,logger_name+'.log')
