@@ -181,7 +181,7 @@ async def on_ready():
 # stopping this works rather poorly, should probably find a cleaner method
 async def check_notifications_periodically():
 	await client.wait_until_ready()
-	start_time = datetime.utcnow() - timedelta(minutes=5)
+	start_time = datetime.utcnow()+timedelta(minutes=1)  # check nothing on first iteration
 	while not client.is_closed:
 		end_time = datetime.utcnow()
 		try:
@@ -196,7 +196,7 @@ async def check_notifications_periodically():
 				if to_send:
 					for curr_to_send in to_send:
 						await message_user(notif.get_user_channel_id(curr_to_send[0]),"**New reddit post matching your alert!**\n{}".format(str(curr_to_send[1])))
-				logging.info("Checked notifications from {} to {}".format(start_time.strftime('%Y-%m-%d %H:%M:%S'),end_time.strftime('%Y-%m-%d %H:%M:%S')))
+			logging.info("Checked notifications from {} to {}".format(start_time.strftime('%Y-%m-%d %H:%M:%S'),end_time.strftime('%Y-%m-%d %H:%M:%S')))
 		except Exception as e:
 			logging.exception("Issue checking notifications.")
 		start_time = end_time
