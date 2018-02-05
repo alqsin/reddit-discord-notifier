@@ -104,6 +104,7 @@ def check_one_subreddit(subreddit_name,notifications,reddit,start_time,end_time)
 				logging.info("Found notification for post {}".format(post.post_title))
 				tuple_to_add = (notification['user'],post)
 				if tuple_to_add not in notifications_to_send:
+					logging.info("Adding notification for {} to queue.".format(notification['user']))
 					notifications_to_send.append(tuple_to_add)
 	return notifications_to_send  # note that this is an array of pairs of type (str,RedditPost)
 
