@@ -107,8 +107,7 @@ async def run_notification_command(message):
 		return send_help()
 	elif command == '!clear':
 		return clear_messages(message.channel)
-	else:
-		return 0
+	return 0
 
 async def clear_messages(channel):
 	tmp = await client.send_message(channel, 'Clearing messages...')
@@ -138,8 +137,7 @@ async def run_general_command(message):
 	elif command == '!clear':
 		if str(message.author) == get_discord_admin():
 			return await clear_messages(message.channel)
-	else:
-		return 0
+	return 0
 
 async def message_user(channel_id,message_text):
 	'''sends a message to a user via channel, which should be their user id'''
@@ -212,7 +210,6 @@ async def on_message(message):
 		try:
 			result = await run_command(message)
 			if result == 0:
-				#await client.send_message(message.channel,"I don't think that was a valid command...")
 				return
 			else:
 				await client.send_message(message.channel,result)
