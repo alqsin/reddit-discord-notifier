@@ -76,8 +76,6 @@ def send_help():
 	\tremoves alert n (use !list to see alert numbers)
 	**!undo**
 	\treverts last change made to list of alerts
-	**!clear**
-	\tclears channel
 	'''
 	return help_message
 
@@ -105,15 +103,15 @@ async def run_notification_command(message):
 		return notif.undo_last_change(message.channel.name)
 	elif command == '!help':
 		return send_help()
-	elif command == '!clear':
-		return clear_messages(message.channel)
+	# elif command == '!clear':
+	# 	return clear_messages(message.channel)
 	return 0
 
-async def clear_messages(channel):
-	tmp = await client.send_message(channel, 'Clearing messages...')
-	async for msg in client.logs_from(channel):
-		await client.delete_message(msg)
-	return "Cleared channel of messages."
+# async def clear_messages(channel):
+# 	tmp = await client.send_message(channel, 'Clearing messages...')
+# 	async for msg in client.logs_from(channel):
+# 		await client.delete_message(msg)
+# 	return "Cleared channel of messages."
 
 async def run_general_command(message):
 	'''runs a command in #general
@@ -134,9 +132,9 @@ async def run_general_command(message):
 	elif command == '!test':
 		if str(message.author) == get_discord_admin():
 			return await test(message)
-	elif command == '!clear':
-		if str(message.author) == get_discord_admin():
-			return await clear_messages(message.channel)
+	# elif command == '!clear':
+	# 	if str(message.author) == get_discord_admin():
+	# 		return await clear_messages(message.channel)
 	return 0
 
 async def message_user(channel_id,message_text):
