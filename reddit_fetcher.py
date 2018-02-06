@@ -69,12 +69,12 @@ def get_reddit_posts(subreddit_name,reddit,start_time,end_time):
 	new_submissions = []
 
 	for submission in subreddit.new(limit=NUMBER_NEW_TO_GET):
-		post_time = get_time_from_stamp(submission.created_utc) #submission.created returns timestamp in utc
+		post_time = get_time_from_stamp(submission.created_utc) #submission.created_utc returns unix timestamp in utc
 		post_title = submission.title
 		post_id = submission.fullname
 		post_author = submission.author
-		post_url = submission.permalink
-		# consider adding score, etc.
+		post_url = 'https://www.reddit.com' + submission.permalink  # consider checking for presence of https in case they change how this works in future
+		# consider adding score, body, etc.
 		current_post = RedditPost(post_id=post_id,post_title=post_title,post_time=post_time,post_url=post_url,post_author=post_author)
 		if (post_time) > end_time:
 			continue
