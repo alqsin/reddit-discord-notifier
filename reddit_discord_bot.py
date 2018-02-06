@@ -119,10 +119,10 @@ async def run_general_command(message):
 	(command,command_body) = split_command(message.content)
 	if command == '!stop':
 		if str(message.author) == get_discord_admin():
-			await client.send_message(message.channel,'See you later!')
+			set_exit_flag()
 			logging.info("Shutting down.")
+			await client.send_message(message.channel,'See you later!')
 			await client.close()
-			exit()
 		else:
 			#await client.send_message(message.channel,'No.')
 			return 0
@@ -182,7 +182,7 @@ async def on_ready():
 async def check_notifications_periodically():
 	await client.wait_until_ready()
 	start_time = datetime.utcnow()+timedelta(minutes=1)  # check nothing on first iteration
-	while not client.is_closed:
+	while not client.is_closed and not EXIT_FLAG:
 		end_time = datetime.utcnow()
 		try:
 			praw_instance = rdt.get_praw_instance()
@@ -201,6 +201,8 @@ async def check_notifications_periodically():
 			logging.exception("Issue checking notifications.")
 		start_time = end_time
 		await asyncio.sleep(60)  # later will change this to be based on timestamp instead of just sleeping for 60s I guess
+	logging.info("Client closed or exit flag found, closing notification checking loop.")
+	return
 
 @client.event
 async def on_message(message):
@@ -219,8 +221,17 @@ async def on_message(message):
 			# here we want to message the admin or something
 			# also should probably add a validation making sure admin is in the discord server
 
+def set_exit_flag():
+	global EXIT_FLAG
+	EXIT_FLAG = True
+
 #main_log = initialize_logger('discord_bot')
 #reddit_log = initialize_logger('reddit')
 
+EXIT_FLAG = False
+
 client.loop.create_task(check_notifications_periodically())
-client.run(get_discord_token())
+while not EXIT_FLAG:
+	client.run(get_discord_token())
+	await asyncio.sleep(60)
+client.loop.close()
