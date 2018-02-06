@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime,timedelta
 import os
+import time  # for sleeping in body
 
 import logging
 log_dir = 'logs/'
@@ -233,5 +234,5 @@ EXIT_FLAG = False
 client.loop.create_task(check_notifications_periodically())
 while not EXIT_FLAG:
 	client.run(get_discord_token())
-	await asyncio.sleep(60)
+	time.sleep(60)
 client.loop.close()
