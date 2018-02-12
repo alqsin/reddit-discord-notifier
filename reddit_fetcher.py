@@ -85,6 +85,8 @@ def get_reddit_posts(subreddit_name,reddit,start_time,end_time):
 	return new_submissions
 
 def check_one_subreddit(subreddit_name,notifications,reddit,start_time,end_time):
+	'''Checks subreddit /r/subreddit_name for each notification in notifications.
+	Reddit is a praw instance, start and end times indicate the interval to check.'''
 	new_posts = get_reddit_posts(subreddit_name,reddit,start_time,end_time)
 	notifications_to_send = []
 	for post in new_posts:
@@ -109,9 +111,12 @@ def check_one_subreddit(subreddit_name,notifications,reddit,start_time,end_time)
 	return notifications_to_send  # note that this is an array of pairs of type (str,RedditPost)
 
 def get_praw_instance():
+	'''Uses auth.ini to create an instance of praw'''
 	return praw.Reddit(**read_reddit_auth())
 
 def validate_subreddit(subreddit_name,reddit=get_praw_instance()):
+	'''Checks that a subreddit exists and has at least 10 posts. 
+	Note that this will not work if reddit is down.'''
 	try:
 		i = 1
 		posts = reddit.subreddit(subreddit_name).new(limit=10)

@@ -185,13 +185,13 @@ async def on_ready():
 async def check_notifications_periodically():
 	await client.wait_until_ready()
 	start_time = datetime.utcnow()-timedelta(minutes=1)  # set initial start time
-	while not client.is_closed or not EXIT_FLAG:
+	while not EXIT_FLAG or not client.is_closed:
 		end_time = datetime.utcnow()
 		try:
 			praw_instance = rdt.get_praw_instance()
 			all_notifications = notif.get_all_notifications()  # note that this is a dictionary
-			to_send = False
 			for curr_sub in all_notifications:
+				to_send = False
 				try:
 					to_send = rdt.check_one_subreddit(curr_sub,all_notifications[curr_sub],praw_instance,start_time,end_time)
 				except Exception as e:
@@ -235,6 +235,10 @@ EXIT_FLAG = False
 
 client.loop.create_task(check_notifications_periodically())
 while not EXIT_FLAG:
-	client.run(get_discord_token())
+	try:
+		client.run(get_discord_token())
+	except Exception as e:
+		logging.exception("Discord client exited with an exception.")
 	time.sleep(60)
+logging.info("Closing loop.")
 client.loop.close()
