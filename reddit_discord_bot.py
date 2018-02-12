@@ -183,7 +183,7 @@ async def on_ready():
 async def check_notifications_periodically():
 	await client.wait_until_ready()
 	start_time = datetime.utcnow()+timedelta(minutes=1)  # check nothing on first iteration
-	while not client.is_closed and not EXIT_FLAG:
+	while not client.is_closed or not EXIT_FLAG:
 		end_time = datetime.utcnow()
 		try:
 			praw_instance = rdt.get_praw_instance()
