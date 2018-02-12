@@ -99,7 +99,7 @@ def add_config_item(file,new_item):
 	config.add_section(str(curr_num_entries+1))  # this works assuming current entries are named in [1,curr_num_entries]
 	for (key,item) in new_item.items():
 		config[str(curr_num_entries+1)][str(key)] = item
-	safe_write_config_no_undo(file,config)
+	safe_write_config(file,config)
 
 # determine a way to merge this and add_config_item() which uses the # of items as a section name
 def add_named_config_item(file,new_item,new_item_name):

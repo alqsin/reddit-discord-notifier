@@ -33,6 +33,8 @@ client = discord.Client()
 # TODO: stop it from checking for notifications before the reddit bot is initialized (or set start_time to a little later)
 # TODO: implement checking by post-id, as if the post is 'invisible' during the first few minutes after it is posted it will be ignored
 # TODO: add (optional) pushover integration
+# TODO: delay between sending messages to discord
+# TODO: validate input for author (should be one word)
 
 # def initialize_logger(logger_name):
 # 	log_file = os.path.join(log_dir,logger_name+'.log')
@@ -182,7 +184,7 @@ async def on_ready():
 # stopping this works rather poorly, should probably find a cleaner method
 async def check_notifications_periodically():
 	await client.wait_until_ready()
-	start_time = datetime.utcnow()+timedelta(minutes=1)  # check nothing on first iteration
+	start_time = datetime.utcnow()-timedelta(minutes=1)  # set initial start time
 	while not client.is_closed or not EXIT_FLAG:
 		end_time = datetime.utcnow()
 		try:
