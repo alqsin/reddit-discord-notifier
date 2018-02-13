@@ -14,8 +14,6 @@ import settings_io
 import notifications_handler as notif
 import reddit_fetcher as rdt
 
-client = discord.Client()
-
 # TODO: add initialization method that sets admin, creates necessary folder structure, etc.
 # TODO: create 'community' mode that has subreddit-based channels and pings users (and keeps user-based lists still)
 # TODO: initialization of a user should delete the previous notifications list probably
@@ -35,6 +33,7 @@ client = discord.Client()
 # TODO: add (optional) pushover integration
 # TODO: delay between sending messages to discord
 # TODO: validate input for author (should be one word)
+# TODO: (maybe) set reddit_fetcher to get a stream of posts, quit when they get too old (may minimize # of calls to reddit)
 
 # def initialize_logger(logger_name):
 # 	log_file = os.path.join(log_dir,logger_name+'.log')
@@ -46,6 +45,29 @@ client = discord.Client()
 # 	log.addHandler(log_fh)
 # 	log.propagate = False
 # 	return log
+
+class MyClient(discord.Client):
+	async def on_message(self,message):
+		if message.content == 'hi' or message.content == 'Hi' or message.content == 'Hello' or message.content == 'hello':
+			await client.send_message(message.channel,'Hello {}'.format(str(message.author.mention)))
+		elif message.content.startswith('!'):
+			try:
+				result = await run_command(message)
+				if result == 0:
+					return
+				else:
+					await client.send_message(message.channel,result)
+			except Exception as e:
+				logging.exception("Issue running ! command.")
+				await client.send_message(message.channel,"Error occurred, please PM someone complaining about this.")
+				# here we want to message the admin or something
+				# also should probably add a validation making sure admin is in the discord server
+	async def on_ready(self):
+		logging.info("Hello")
+		print('Logged in as')
+		print(client.user.name)
+		print(client.user.id)
+		print('------')
 
 def get_discord_auth():
 	AUTH_FILE = 'auth.ini'
@@ -106,15 +128,7 @@ async def run_notification_command(message):
 		return notif.undo_last_change(message.channel.name)
 	elif command == '!help':
 		return send_help()
-	# elif command == '!clear':
-	# 	return clear_messages(message.channel)
 	return 0
-
-# async def clear_messages(channel):
-# 	tmp = await client.send_message(channel, 'Clearing messages...')
-# 	async for msg in client.logs_from(channel):
-# 		await client.delete_message(msg)
-# 	return "Cleared channel of messages."
 
 async def run_general_command(message):
 	'''runs a command in #general
@@ -126,18 +140,12 @@ async def run_general_command(message):
 			logging.info("Shutting down.")
 			await client.send_message(message.channel,'See you later!')
 			await client.close()
-		else:
-			#await client.send_message(message.channel,'No.')
-			return 0
 	elif command == '!initialize':
 		if str(message.author) == get_discord_admin():
 			return await initialize_user(command_body,message.server)
 	elif command == '!test':
 		if str(message.author) == get_discord_admin():
 			return await test(message)
-	# elif command == '!clear':
-	# 	if str(message.author) == get_discord_admin():
-	# 		return await clear_messages(message.channel)
 	return 0
 
 async def message_user(channel_id,message_text):
@@ -173,19 +181,14 @@ async def initialize_user(user_name,server):
 async def test(message):
 	return 0
 
-@client.event
-async def on_ready():
-	logging.info("Hello")
-	print('Logged in as')
-	print(client.user.name)
-	print(client.user.id)
-	print('------')
- 
 # stopping this works rather poorly, should probably find a cleaner method
 async def check_notifications_periodically():
 	await client.wait_until_ready()
 	start_time = datetime.utcnow()-timedelta(minutes=1)  # set initial start time
-	while not EXIT_FLAG or not client.is_closed:
+	while not RESTART_FLAG and not EXIT_FLAG:
+		while client.is_closed and not (RESTART_FLAG or EXIT_FLAG):  # wait for client to be open if no flags are set
+			logging.info("Client currently closed, waiting 15 seconds to check notifications.")
+			await asyncio.sleep(15)
 		end_time = datetime.utcnow()
 		try:
 			praw_instance = rdt.get_praw_instance()
@@ -203,42 +206,31 @@ async def check_notifications_periodically():
 		except Exception as e:
 			logging.exception("Issue checking notifications.")
 		start_time = end_time
-		await asyncio.sleep(60)  # later will change this to be based on timestamp instead of just sleeping for 60s I guess
-	logging.info("Client closed or exit flag found, closing notification checking loop.")
+		await asyncio.sleep(60)  # I guess it doesn't matter if it checks exactly every minute
+	logging.info("Exit or restart flag found, closing notification checking loop.")
 	return
-
-@client.event
-async def on_message(message):
-	if message.content == 'hi' or message.content == 'Hi' or message.content == 'Hello' or message.content == 'hello':
-		await client.send_message(message.channel,'Hello {}'.format(str(message.author.mention)))
-	elif message.content.startswith('!'):
-		try:
-			result = await run_command(message)
-			if result == 0:
-				return
-			else:
-				await client.send_message(message.channel,result)
-		except Exception as e:
-			logging.exception("Issue running ! command.")
-			await client.send_message(message.channel,"Error occurred, please PM someone complaining about this.")
-			# here we want to message the admin or something
-			# also should probably add a validation making sure admin is in the discord server
 
 def set_exit_flag():
 	global EXIT_FLAG
 	EXIT_FLAG = True
 
-#main_log = initialize_logger('discord_bot')
-#reddit_log = initialize_logger('reddit')
+if __name__ == "__main__":
 
-EXIT_FLAG = False
+	EXIT_FLAG = False
 
-client.loop.create_task(check_notifications_periodically())
-while not EXIT_FLAG:
-	try:
-		client.run(get_discord_token())
-	except Exception as e:
-		logging.exception("Discord client exited with an exception.")
-	time.sleep(60)
-logging.info("Closing loop.")
-client.loop.close()
+	while not EXIT_FLAG:
+		try:
+			RESTART_FLAG = False
+			client = MyClient()
+			client.loop.create_task(check_notifications_periodically())
+			client.run(get_discord_token())
+		except Exception as e:
+			logging.exception("Discord client exited with an exception.")
+		if not (RESTART_FLAG or EXIT_FLAG):
+			RESTART_FLAG = True  # if it reaches this point, the client exited for some unknown reason, so restart
+		if not client.is_closed:
+			logging.info("Closing and restarting client.")
+			client.close()
+		time.sleep(75)
+
+	logging.info("Reached end of program.")
