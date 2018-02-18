@@ -34,6 +34,9 @@ import reddit_fetcher as rdt
 # TODO: delay between sending messages to discord
 # TODO: validate input for author (should be one word)
 # TODO: (maybe) set reddit_fetcher to get a stream of posts, quit when they get too old (may minimize # of calls to reddit)
+# TODO: validate search term input (shlex doesn't like mixed single and double quotes)
+# TODO: don't need to access auth file repeatedly; only reading once on startup should work (maybe re-read when restarting bot)
+# TODO: !restart
 
 # def initialize_logger(logger_name):
 # 	log_file = os.path.join(log_dir,logger_name+'.log')
@@ -181,7 +184,6 @@ async def initialize_user(user_name,server):
 async def test(message):
 	return 0
 
-# stopping this works rather poorly, should probably find a cleaner method
 async def check_notifications_periodically():
 	await client.wait_until_ready()
 	start_time = datetime.utcnow()-timedelta(minutes=1)  # set initial start time
@@ -221,16 +223,21 @@ if __name__ == "__main__":
 	while not EXIT_FLAG:
 		try:
 			RESTART_FLAG = False
+			loop = asyncio.new_event_loop()
+			asyncio.set_event_loop(loop)
 			client = MyClient()
-			client.loop.create_task(check_notifications_periodically())
-			client.run(get_discord_token())
+			loop.create_task(check_notifications_periodically())
+			loop.run_until_complete(client.start(get_discord_token()))
 		except Exception as e:
-			logging.exception("Discord client exited with an exception.")
+			logging.exception("Discord bot exited with an exception.")
 		if not (RESTART_FLAG or EXIT_FLAG):
 			RESTART_FLAG = True  # if it reaches this point, the client exited for some unknown reason, so restart
 		if not client.is_closed:
 			logging.info("Closing and restarting client.")
 			client.close()
-		time.sleep(75)
+		if not loop.is_closed():
+			logging.info("Closing and restarting loop.")
+			loop.close()
+		time.sleep(120)
 
 	logging.info("Reached end of program.")
