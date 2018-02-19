@@ -204,6 +204,7 @@ async def check_notifications_periodically():
 				if to_send:
 					for curr_to_send in to_send:
 						await message_user(notif.get_user_channel_id(curr_to_send[0]),"**New reddit post matching your alert!**\n{}".format(str(curr_to_send[1])))
+						await asyncio.sleep(0.002)  # sleep 2 ms to avoid the rate limit message
 			logging.info("Checked notifications from {} to {}".format(start_time.strftime('%Y-%m-%d %H:%M:%S'),end_time.strftime('%Y-%m-%d %H:%M:%S')))
 		except Exception as e:
 			logging.exception("Issue checking notifications.")
