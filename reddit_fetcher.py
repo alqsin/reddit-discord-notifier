@@ -25,12 +25,13 @@ def get_time_from_stamp(timestamp_utc):
 	'''converts UTC timestamp to a readable time (still in UTC)'''
 	return datetime.fromtimestamp(timestamp_utc)
 
-def read_reddit_auth():
-	'''reads reddit auth into dictionary with keys corresponding to praw values'''
-	AUTH_FILE = 'auth.ini'
-	AUTH_ENTRY = 'reddit api'
-	AUTH_VALUES = ['client_id','client_secret','username','password','user_agent']
-	return settings_io.read_auth(AUTH_FILE,AUTH_ENTRY,AUTH_VALUES)
+def validate_search_query(search_query):
+	'''Checks if search_query is valid by performing test search.'''
+	try:
+		match_string(search_query,"this is a test")
+	except:
+		return False
+	return True
 
 def parse_search_query(search_query):
 	'''converts a search query into a list of + and - words to match'''
@@ -110,13 +111,15 @@ def check_one_subreddit(subreddit_name,notifications,reddit,start_time,end_time)
 					notifications_to_send.append(tuple_to_add)
 	return notifications_to_send  # note that this is an array of pairs of type (str,RedditPost)
 
-def get_praw_instance():
+def get_praw_instance(reddit_auth):
 	'''Uses auth.ini to create an instance of praw'''
-	return praw.Reddit(**read_reddit_auth())
+	return praw.Reddit(**reddit_auth)
 
 def validate_subreddit(subreddit_name,reddit=get_praw_instance()):
 	'''Checks that a subreddit exists and has at least 10 posts. 
 	Note that this will not work if reddit is down.'''
+	if not subreddit_name.isalpha():
+		return False
 	try:
 		i = 1
 		posts = reddit.subreddit(subreddit_name).new(limit=10)

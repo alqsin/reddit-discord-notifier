@@ -1,19 +1,19 @@
 import configparser
 import os
 
-# should I store a list of known auth values instead of passing them in?
-def read_auth(file,entry,values):
-	'''Uses configparser to get every entry=value in auth file
-	Returns a dictionary with keys in values'''
-	config = configparser.ConfigParser()
-	auth_dict = {}
-	config.read(file)
-	for value in values:
-		new_auth = config[entry][value]  # raises KeyError if doesn't exist
-		if config[entry][value] is None:
-			raise ValueError("Something wrong with value of {} from auth for {}.".format(value,entry))
-		auth_dict[value] = new_auth
-	return auth_dict
+class Auth:
+	def __init__(self,AUTH_FILE='auth.ini'):
+		self.AUTH_FILE = AUTH_FILE
+		self.read_auth()
+	def __getitem__(self,key):
+		'''Returns a section from auth_dict'''
+		try:
+			return auth_dict[key]
+		except:
+			return None
+	def read_auth(self):
+		'''Refreshes stored authorization.'''
+		self.auth_dict = read_config_as_dict(self.AUTH_FILE)
 
 def read_config_as_dict(file):
 	config = configparser.ConfigParser()
@@ -45,40 +45,11 @@ def add_path_to_file(filename):
 	if not os.path.exists(dir_to_file):
 		os.makedirs(dir_to_file)
 
-# figure out a scheme so that the main methods know when reading/writing failed
 def safe_write_config(file,config):
-	path_to_old = get_path_to_old(file)
-
-	# makes sure you can write to the places you want to write to
-	add_path_to_file(file)
-	add_path_to_file(path_to_old)
-
-	with open(file+' temp','w') as config_file:
-		config.write(config_file)
-	os.replace(file,path_to_old)
-	os.rename(file+' temp',file)
-
-def safe_write_config_no_undo(file,config):
 	add_path_to_file(file)
 	with open(file+' temp','w') as config_file:
 		config.write(config_file)
 	os.replace(file+' temp',file)
-
-def get_path_to_old(filename):
-	'''Adds /old/ to the path to file'''
-	return os.path.join(os.path.dirname(filename),'old',os.path.basename(filename))
-
-# TODO: store several copies and have undo strictly go backwards
-def revert_previous_write(file):
-	'''Swaps the archived user notifications file with current one'''
-	path_to_old = get_path_to_old(file)
-
-	if not os.path.exists(path_to_old):
-		return 0
-	os.rename(file,file+' temp')
-	os.replace(path_to_old,file)
-	os.replace(file+' temp',path_to_old)
-	return 1
 
 def write_config_from_list(file,config_list):
 	config = configparser.ConfigParser()
@@ -112,7 +83,7 @@ def add_named_config_item(file,new_item,new_item_name):
 	config.add_section(new_item_name)
 	for (key,item) in new_item.items():
 		config[new_item_name][str(key)] = item
-	safe_write_config_no_undo(file,config)
+	safe_write_config(file,config)
 
 def create_config_file(file):
 	if os.path.exists(file):
