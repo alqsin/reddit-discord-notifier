@@ -7,12 +7,9 @@ class Auth:
 		self.read_auth()
 	def __getitem__(self,key):
 		'''Returns a section from auth_dict'''
-		try:
-			return auth_dict[key]
-		except:
-			return None
+		return self.auth_dict[key]
 	def read_auth(self):
-		'''Refreshes stored authorization.'''
+		'''Refreshes stored auth.'''
 		self.auth_dict = read_config_as_dict(self.AUTH_FILE)
 
 def read_config_as_dict(file):
@@ -38,15 +35,7 @@ def read_config_as_list(file):
 		config_list.append(curr_entry)
 	return config_list
 
-def add_path_to_file(filename):
-	dir_to_file = os.path.dirname(filename)
-	if not dir_to_file:
-		return
-	if not os.path.exists(dir_to_file):
-		os.makedirs(dir_to_file)
-
 def safe_write_config(file,config):
-	add_path_to_file(file)
 	with open(file+' temp','w') as config_file:
 		config.write(config_file)
 	os.replace(file+' temp',file)
@@ -64,7 +53,7 @@ def write_config_from_list(file,config_list):
 def add_config_item(file,new_item):
 	config = configparser.ConfigParser()
 	if not os.path.exists(file):
-		create_config_file(file)  # don't know if this is the best way of handling
+		raise ValueError('No such file!')
 	config.read(file)
 	curr_num_entries = len(config.sections())  # add some validation here?
 	config.add_section(str(curr_num_entries+1))  # this works assuming current entries are named in [1,curr_num_entries]
@@ -72,23 +61,16 @@ def add_config_item(file,new_item):
 		config[str(curr_num_entries+1)][str(key)] = item
 	safe_write_config(file,config)
 
-# determine a way to merge this and add_config_item() which uses the # of items as a section name
-def add_named_config_item(file,new_item,new_item_name):
-	config = configparser.ConfigParser()
-	if not os.path.exists(file):
-		create_config_file(file)
-	config.read(file)
-	if new_item_name in config.sections():
-		config.remove_section(new_item_name)
-	config.add_section(new_item_name)
-	for (key,item) in new_item.items():
-		config[new_item_name][str(key)] = item
-	safe_write_config(file,config)
-
 def create_config_file(file):
 	if os.path.exists(file):
 		raise ValueError("File already exists.")
-	add_path_to_file(file)
 	open(file,'a').close()
 
-# adding paths is ugly, clean up later
+def open_file_as_list(file):
+	try:
+		with open(file,'r') as f:
+			file_contents = f.readlines()
+		file_contents = [line.strip() for line in file_contents]
+		return file_contents
+	except:
+		return []

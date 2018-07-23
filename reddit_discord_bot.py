@@ -14,18 +14,15 @@ import settings_io
 import notifications_handler as notif
 import reddit_fetcher as rdt
 
-# TODO: initialization of a user should delete the previous notifications list probably
 # TODO: rotate logs (rotatingfilehandler?)
 # TODO: add more stuff to reddit_post, e.g. the description text
-# TODO: better way of handling commands? discord.py has default method?
-# TODO: welcome message (on startup + for new users)
+# TODO: better way of handling commands?
+# TODO: welcome message for people joining server (would have to be a separate 'bot' I suppose)
 # TODO: add console output for warnings/errors
 # TODO: prevent the same alert from being added twice
 # TODO: validate discord messages being sent (limits, valid characters, etc.)
-# TODO: stop it from checking for notifications before the reddit bot is initialized (or set start_time to a little later)
-# TODO: add (optional) pushover integration
 # TODO: validate input for author (should be one word)
-# TODO: (maybe) set reddit_fetcher to get a stream of posts, quit when they get too old (may minimize # of calls to reddit)
+# TODO: catalog already-checked post ids and check more than just past minute (ignoring previously checked posts)
 # TODO: don't need to access auth file repeatedly; only reading once on startup should work (maybe re-read when restarting bot)
 # TODO: !restart
 # TODO: timing changes based on subreddit
@@ -35,7 +32,7 @@ class MyClient(discord.Client):
 		if not message.channel.is_private:
 			pass
 		elif message.content.lower() == 'hi' or message.content.lower() == 'hello':
-			await client.send_message(message.channel,'Hello {}'.format(str(message.author.mention)))
+			await client.send_message(message.channel,'Hello {}'.format(str(message.author)))
 		elif message.content.startswith('!'):
 			try:
 				result = await run_command(message)
@@ -61,70 +58,49 @@ def get_discord_token():
 def get_discord_admin():
 	return MY_AUTH['discord']['admin']
 
-def split_command(command):
-	words = command.strip().split(' ')
-	return words
-
 def send_help():
 	help_message = '''**Commands:**
-	**!redditbot initialize**
-	\tbecome a user of redditbot
-	**!redditbot deinitialize**
+	**!initialize**
+	\tinitialize list
+	**!deinitialize**
 	\tdelete your list
-	**!redditbot list**
+	**!list**
 	\tprovides a list of alerts
-	**!redditbot add [subreddit] [title|author] [search query]**
+	**!add [subreddit] [title|author] [search query]**
 	\tadds an alert
 	\tsearch query is of form [word1 word2 word3]
 	\tmatch exact phrases by wrapping words like ["word1 word2" word3]
 	\tprevent matching words by prefixing them with -, e.g. [word1 word2 -word3]
-	**!redditbot remove [n]**
+	**!remove [n]**
 	\tremoves alert n (use !list to see alert numbers)
 	'''
 	return help_message
 
 async def run_command(message):
-	'''sends a command to run_general_command() or run_notification_command()'''
-	admin_commands = ['!stop','!test']
-	if any(message.content.startswith(command) for command in admin_commands):
-		return await run_admin_command(message)
-	elif str(message.channel) in notif.get_valid_users():
-		return run_notification_command(message)
-	else:
-		return 0
-
-def run_server_command(message):
-	'''Runs a command. Must start with !redditbot
-	Returns some string if it did something, 0 otherwise'''
-	(command,command_body) = split_command(message.content)
-	if not command[0] == '!redditbot' or not len(command) >= 2:
-		return 0
-	if command[1] == 'help':
+	command = message.content.lower().strip().split(' ')
+	if command[0] == '!help':
 		return send_help()
-	elif command[1] == 'list':
-		return notif.list_notifications(str(message.user.id))
-	elif command[1] == 'add' and len(command) >= 3:
-		return notif.add_notification("".join(command[2:]),str(message.user.id))
-	elif command[1] == 'remove' and len(command) == 3:
-		return notif.remove_notification(command[2],str(message.user.id))
-	return "Not a valid command."
-
-async def run_admin_command(message):
-	'''Runs an administrative command in response to a PM.'''
-	if not str(message.author) == get_discord_admin():
-		return 0
-	command = split_command(message.content)
-	if command[0] == '!stop':
-		set_exit_flag()
-		logging.info("Shutting down.")
+	elif command[0] == '!initialize':
+		return notif.initialize_user(str(message.author.id))
+	elif not notif.validate_user(str(message.author.id)):
+		return 'Type !help for help!'
+	elif command[0] == '!list':
+		return notif.list_notifications(str(message.author.id))
+	elif command[0] == '!add':
+		return notif.add_notification(" ".join(command[1:]),str(message.author.id))
+	elif command[0] == '!remove':
+		return notif.remove_notification(command[1],str(message.author.id))
+	elif command[0] == '!deinitialize':
+		return notif.deinitialize_user(str(message.author.id))
+	elif command[0] == '!stop' and str(message.author) == get_discord_admin():
 		await client.send_message(message.channel,'See you later!')
-		await client.close()
-	elif command[0] == '!test':
+		return await client_exit()
+	elif command[0] == '!test' and str(message.author) == get_discord_admin():
 		return await test(message)
 	return 0
 
 async def message_user(user_id,message_text):
-	'''Sends a message to user with id user_id.'''
+	'''Sends a private message to user with id user_id.'''
 	channel = client.get_channel(user_id)
 	if channel is None:
 		logging.error("Failed to find user with id {}".format(user_id))
@@ -134,6 +110,12 @@ async def message_user(user_id,message_text):
 
 async def test(message):
 	return 'This is a test!'
+
+async def client_exit():
+	set_exit_flag()
+	logging.info("Shutting down.")
+	await client.close()
+	return 0
 
 async def check_notifications_periodically():
 	notif.do_startup_routine()
@@ -145,7 +127,8 @@ async def check_notifications_periodically():
 			await asyncio.sleep(15)
 		end_time = datetime.utcnow()
 		try:
-			praw_instance = rdt.get_praw_instance(MY_AUTH['reddit'])
+			praw_instance = rdt.get_praw_instance(MY_AUTH['reddit api'])
+			# TODO: this is stupid, get notification by user (or have it in a data structure where users are roots)
 			all_notifications = notif.get_all_notifications()  # note that this is a dictionary
 			for curr_sub in all_notifications:
 				to_send = False
@@ -154,10 +137,10 @@ async def check_notifications_periodically():
 				except Exception as e:
 					logging.exception("Failure to check reddit posts for {}.".format(curr_sub))
 				if to_send:
-					for (curr_server,curr_channel,curr_user,curr_post) in to_send:
-						await message_user(get_channel(curr_server,curr_channel),"**New reddit post matching your alert!**\n{}".format(str(curr_post)))
+					for (curr_user,curr_post) in to_send:
+						await message_user(curr_user,"**New reddit post matching your alert!**\n{}".format(str(curr_post)))
 						await asyncio.sleep(0.002)  # sleep 2 ms to avoid the rate limit message
-			logging.info("Checked notifications from {} to {}".format(start_time.strftime('%Y-%m-%d %H:%M:%S'),end_time.strftime('%Y-%m-%d %H:%M:%S')))
+			logging.info("Checked posts from {} to {}".format(start_time.strftime('%Y-%m-%d %H:%M:%S'),end_time.strftime('%Y-%m-%d %H:%M:%S')))
 		except Exception as e:
 			logging.exception("Issue checking notifications.")
 		start_time = end_time

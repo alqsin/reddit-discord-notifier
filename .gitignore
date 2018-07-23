@@ -6,3 +6,4 @@ users
 users.ini
 !/TEMPLATE/*
 unused
+allowed_subreddits

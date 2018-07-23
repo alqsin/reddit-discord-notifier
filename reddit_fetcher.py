@@ -4,13 +4,14 @@ from time import strftime
 import re
 import settings_io
 import shlex  # for splitting with quoted substring
+import os  # for checking if there is an allowed subreddits file
 
 import logging
 log = logging.getLogger()
 
 class RedditPost:
 	'''structure of a reddit post'''
-	def __init__(self,post_id,post_title,post_time,post_url,post_author):  # wow this is so wordy
+	def __init__(self,post_id,post_title,post_time,post_url,post_author):
 		self.post_id = post_id
 		self.post_title = post_title
 		self.post_time = post_time
@@ -22,8 +23,14 @@ class RedditPost:
 		return "{}\n{}\n".format(self.post_title,self.post_url)
 
 def get_time_from_stamp(timestamp_utc):
-	'''converts UTC timestamp to a readable time (still in UTC)'''
+	'''Converts UTC timestamp to a readable time (still in UTC)'''
 	return datetime.fromtimestamp(timestamp_utc)
+
+def read_reddit_auth():
+	'''Reads reddit auth into dictionary with keys corresponding to praw values.
+	Used when praw instance is not provided to function.'''
+	reddit_auth = settings_io.Auth()
+	return reddit_auth['reddit api']
 
 def validate_search_query(search_query):
 	'''Checks if search_query is valid by performing test search.'''
@@ -91,6 +98,7 @@ def check_one_subreddit(subreddit_name,notifications,reddit,start_time,end_time)
 	new_posts = get_reddit_posts(subreddit_name,reddit,start_time,end_time)
 	notifications_to_send = []
 	for post in new_posts:
+		# TODO: iterate through users rather than through a list of all notifications
 		for notification in notifications:
 			curr_match = False
 			if notification['type'] == 'title':
@@ -115,10 +123,10 @@ def get_praw_instance(reddit_auth):
 	'''Uses auth.ini to create an instance of praw'''
 	return praw.Reddit(**reddit_auth)
 
-def validate_subreddit(subreddit_name,reddit=get_praw_instance()):
+def validate_subreddit(subreddit_name,reddit=get_praw_instance(read_reddit_auth())):
 	'''Checks that a subreddit exists and has at least 10 posts. 
 	Note that this will not work if reddit is down.'''
-	if not subreddit_name.isalpha():
+	if not subreddit_name.isalpha() or not subreddit_is_allowed(subreddit_name):
 		return False
 	try:
 		i = 1
@@ -130,3 +138,11 @@ def validate_subreddit(subreddit_name,reddit=get_praw_instance()):
 		return True
 	except:
 		return False
+
+def subreddit_is_allowed(subreddit_name):
+	allowed_subreddits_file = 'allowed_subreddits'
+	if not os.path.exists(allowed_subreddits_file):
+		return True
+	if subreddit_name in settings_io.open_file_as_list(allowed_subreddits_file):
+		return True
+	return False
