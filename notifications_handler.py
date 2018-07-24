@@ -2,6 +2,34 @@ import settings_io
 import os
 import reddit_fetcher as rdt
 
+# class Notification:
+# 	def __init__(self,text,user=None):
+# 		self.text = text
+# 		self.user = user
+# 	def __str__(self):
+# 		return "Subreddit: /r/{}\nType: {}\nQuery: {}\n".format(self.get_subreddit(),self.get_type(),self.get_query())
+# 	def get_subreddit(self):
+# 		return self.text.split(' ',2)[0]
+# 	def get_type(self):
+# 		return self.text.split(' ',2)[1]
+# 	def get_query(self):
+# 		return self.text.split(' ',2)[2]
+# 	def get_text(self):
+# 		return self.text
+# 	def is_valid():
+# 		'''Returns 1 if notification is valid, else returns a string
+# 		with reason for notification being invalid.'''
+# 		if not len(self.text.split(' ')) >= 3:
+# 			return "Invalid notification format."
+# 		if not rdt.validate_subreddit(self.get_subreddit()):
+# 			return "Subreddit is invalid or not allowed (or Reddit is down)."
+# 		if not (self.get_type() == 'title' or self.get_type() == 'author'):
+# 			return "Query type must be title or author."
+# 		if not rdt.validate_search_query(self.get_query()):
+# 			return "Not a valid search query."
+# 		return True
+
+
 def is_integer(x):
 	'''Returns true if x can be cast to integer; else returns False.'''
 	try:
@@ -11,17 +39,21 @@ def is_integer(x):
 	return True
 
 def do_startup_routine(path='users'):
+	'''Creates users folder if it doesn't exist.'''
 	if not os.path.exists(path):
 		os.makedirs(path)
 
 def notification_to_str(notification):
+	'''Converts a notification dictionary into a string.'''
 	return "Subreddit: /r/{}\nType: {}\nQuery: {}\n".format(notification['sub'],notification['type'],notification['query'])
 
 def get_user_path(user,path='users'):
+	'''Joins path to users folder with user.'''
 	return os.path.join(path,user)
 
 def add_notification(text,user_id):
-	'''Format for notification text should be [subreddit] [type] [search query]'''
+	'''Adds notification to user with id user_id from text.
+	Format for notification text should be [subreddit] [type] [search query].'''
 	split_text = text.split(' ',2)
 	if len(split_text) != 3:
 		return "Invalid alert format, please try again."
@@ -43,6 +75,7 @@ def add_notification(text,user_id):
 	return "**Added the following alert:**\n{}".format(notification_to_str(new_notification))
 
 def remove_notification(num,user_id):
+	'''Removes notification number num from list of user with id user_id.'''
 	if not is_integer(num):
 		return "That's not a valid integer."
 	num = int(num)
@@ -56,10 +89,12 @@ def remove_notification(num,user_id):
 	return "**Deleted the following alert:**\n{}".format(notification_to_str(removed_notification))
 
 def read_notifications(user_id):
+	'''Returns notifications of user with id user_id, as a list of notification dicts.'''
 	user_path = get_user_path(user_id)
 	return settings_io.read_config_as_list(user_path)
 
 def list_notifications(user_id):
+	'''Outputs notifications of user with id user_id, as text.'''
 	notifications = read_notifications(user_id)
 	if not notifications:
 		return "Could not find alerts for user."
@@ -70,7 +105,13 @@ def list_notifications(user_id):
 		i += 1
 	return notif_str
 
+def append_user_to_dict(notification,user_path):
+	notification = notification.copy()
+	notification['user'] = os.path.basename(user_path)
+	return notification
+
 def get_all_notifications(path='users'):
+	'''Goes through folder path and gets every notification. Also adds user as an entry to the dictionary.'''
 	if not os.path.isdir(path):
 		# this shouldn't happen, as path is created on startup
 		return {}
@@ -85,17 +126,14 @@ def get_all_notifications(path='users'):
 				notification_dict[curr_entry['sub']] = [append_user_to_dict(curr_entry,file)]
 	return notification_dict
 
-def append_user_to_dict(notification,user_path):
-	notification = notification.copy()
-	notification['user'] = os.path.basename(user_path)
-	return notification
-
 def validate_user(user_id):
+	'''Checks if user is initialized.'''
 	if os.path.exists(get_user_path(user_id)):
 		return True
 	return False
 
 def initialize_user(user_id):
+	'''Initializes user.'''
 	if validate_user(user_id):
 		return "You already have a list!"
 	else:
@@ -106,6 +144,7 @@ def initialize_user(user_id):
 			return "Something went wrong with initialization, please contact my owner."
 
 def deinitialize_user(user_id):
+	'''Deletes user's list.'''
 	try:
 		os.remove(get_user_path(user_id))
 		return "Removed your list!"

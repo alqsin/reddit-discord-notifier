@@ -10,7 +10,6 @@ import logging
 log = logging.getLogger()
 
 class RedditPost:
-	'''structure of a reddit post'''
 	def __init__(self,post_id,post_title,post_time,post_url,post_author):
 		self.post_id = post_id
 		self.post_title = post_title
@@ -40,10 +39,18 @@ def validate_search_query(search_query):
 		return False
 	return True
 
-def parse_search_query(search_query):
-	'''converts a search query into a list of + and - words to match'''
+def split_query(search_query):
+	'''Uses shlex to split a search query. Single quotes are 'ignored' as quotes.
+	Comments are allowed (in case someone wants to comment on a particular query I guess???).'''
 	search_query = search_query.strip()
-	search_word_list = shlex.split(search_query)  # uses shlex library, be careful here
+	s = shlex.shlex(search_query)
+	s.quotes = '"'
+	s.whitespace_split = True
+	return list(s)
+
+def parse_search_query(search_query):
+	'''Converts a search query into a list of + and - words to match (either positively or negatively).'''
+	search_word_list = split_query(search_query)  # uses shlex library, be careful here
 	positive_matches = []
 	negative_matches = []
 	for word in search_word_list:
@@ -54,8 +61,8 @@ def parse_search_query(search_query):
 	return (positive_matches,negative_matches)
 
 def match_string(search_query,word):
-	'''given a list of regex-compatible strings, searches word and returns true if all strings are matched
-	ALWAYS IGNORES CASE, even when trying to search user'''
+	'''Given a list of regex-compatible strings, searches word and returns true if all strings are matched.
+	Ignores case, always.'''
 	(positive_matches,negative_matches) = parse_search_query(search_query)
 	for val in negative_matches:
 		pattern = re.compile(val,re.IGNORECASE)
@@ -68,8 +75,8 @@ def match_string(search_query,word):
 	return True
 
 def get_reddit_posts(subreddit_name,reddit,start_time,end_time):
-	'''returns posts in /r/subreddit_name posted after cutoff_time
-	reddit is an instance of praw with authorization included'''
+	'''Returns posts in /r/subreddit_name posted after cutoff_time.
+	reddit is an instance of praw with authorization included.'''
 	NUMBER_NEW_TO_GET = 10  # assuming bot checks once every minute, hopefully there are no more than 10 posts per minute
 
 	subreddit = reddit.subreddit(subreddit_name)
@@ -120,7 +127,7 @@ def check_one_subreddit(subreddit_name,notifications,reddit,start_time,end_time)
 	return notifications_to_send  # note that this is an array of pairs of type (str,RedditPost)
 
 def get_praw_instance(reddit_auth):
-	'''Uses auth.ini to create an instance of praw'''
+	'''Uses auth.ini to create an instance of praw.'''
 	return praw.Reddit(**reddit_auth)
 
 def validate_subreddit(subreddit_name,reddit=get_praw_instance(read_reddit_auth())):
@@ -128,18 +135,21 @@ def validate_subreddit(subreddit_name,reddit=get_praw_instance(read_reddit_auth(
 	Note that this will not work if reddit is down.'''
 	if not subreddit_name.isalpha() or not subreddit_is_allowed(subreddit_name):
 		return False
-	try:
-		i = 1
-		posts = reddit.subreddit(subreddit_name).new(limit=10)
-		for post in posts:
-			i += 1
-		if i < 10:
-			return False
-		return True
-	except:
-		return False
+	# try:
+	# 	i = 1
+	# 	posts = reddit.subreddit(subreddit_name).new(limit=10)
+	# 	for post in posts:
+	# 		i += 1
+	# 	if i < 10:
+	# 		return False
+	# 	return True
+	# except:
+	# 	return False
+	return True
 
 def subreddit_is_allowed(subreddit_name):
+	'''Checks if subreddit is in allowed_subreddits and if it is a valid subreddit.
+	If either is false, returns False. Else, returns True.'''
 	allowed_subreddits_file = 'allowed_subreddits'
 	if not os.path.exists(allowed_subreddits_file):
 		return True
