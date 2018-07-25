@@ -22,24 +22,13 @@ handler = TimedRotatingFileHandler(os.path.join(log_dir,'main.log'),when="midnig
 handler.setFormatter(formatter)
 handler.suffix = "%Y%m%d"
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
 
-# set discord.py logger
-dp_handler = TimedRotatingFileHandler(os.path.join(log_dir,'discordpy.log'),when="midnight",interval=1)
-dp_handler.setFormatter(formatter)
-dp_handler.suffix = "%Y%m%d"
-
-dp_logger = logging.getLogger('discord')
-dp_logger.setLevel(logging.INFO)
-dp_logger.addHandler(dp_handler)
-
-# TODO: rotate logs (rotatingfilehandler?)
 # TODO: add more stuff to reddit_post, e.g. the description text
 # TODO: better way of handling commands?
 # TODO: welcome message for people joining server (would have to be a separate 'bot' I suppose)
-# TODO: add console output for warnings/errors
 # TODO: prevent the same alert from being added twice
 # TODO: validate input for author (should be one word)
 # TODO: catalog already-checked post ids and check more than just past minute (ignoring previously checked posts)
@@ -103,17 +92,17 @@ async def run_command(message):
 	if command[0] == '!help':
 		return send_help()
 	elif command[0] == '!initialize':
-		return notif.initialize_user(str(message.author.id))
-	elif not notif.validate_user(str(message.author.id)):
+		return notif.initialize_user(str(message.channel.id))
+	elif not notif.validate_user(str(message.channel.id)):
 		return 'Type !help for help!'
 	elif command[0] == '!list':
-		return notif.list_notifications(str(message.author.id))
+		return notif.list_notifications(str(message.channel.id))
 	elif command[0] == '!add':
-		return notif.add_notification(" ".join(command[1:]),str(message.author.id))
+		return notif.add_notification(" ".join(command[1:]),str(message.channel.id))
 	elif command[0] == '!remove':
-		return notif.remove_notification(command[1],str(message.author.id))
+		return notif.remove_notification(command[1],str(message.channel.id))
 	elif command[0] == '!deinitialize':
-		return notif.deinitialize_user(str(message.author.id))
+		return notif.deinitialize_user(str(message.channel.id))
 	elif command[0] == '!stop' and str(message.author) == get_discord_admin():
 		await client.send_message(message.channel,'See you later!')
 		return await client_exit()
@@ -159,10 +148,10 @@ async def message_user(user_id,message_text):
 
 	channel = client.get_channel(user_id)
 	if channel is None:
-		logger.error("Failed to find user with id {}".format(user_id))
+		logger.error("Failed to find user with id {}.".format(user_id))
 		return 0
 
-	return message_channel(channel,message_text)
+	return await message_channel(channel,message_text)
 	
 async def test(message):
 	return 'This is a test!'
@@ -197,7 +186,10 @@ async def check_notifications_periodically():
 					logger.exception("Failure to check reddit posts for {}.".format(curr_sub))
 				if to_send:
 					for (curr_user,curr_post) in to_send:
-						await message_user(curr_user,"**New reddit post matching your alert!**\n{}".format(str(curr_post)))
+						try:
+							await message_user(curr_user,"**New reddit post matching your alert!**\n{}".format(str(curr_post)))
+						except Exception as e:
+							logger.exception("Failed to send notification to user {}.".format(curr_user))
 			logger.info("Checked posts from {} to {}".format(start_time.strftime('%Y-%m-%d %H:%M:%S'),end_time.strftime('%Y-%m-%d %H:%M:%S')))
 		except Exception as e:
 			logger.exception("Issue checking notifications.")

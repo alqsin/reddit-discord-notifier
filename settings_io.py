@@ -73,7 +73,7 @@ def open_file_as_list(file):
 	try:
 		with open(file,'r') as f:
 			file_contents = f.readlines()
-	except:
+	except Exception as e:
 		return []
 	file_contents = [line.strip() for line in file_contents if line.strip() is not None]
 	return file_contents

@@ -66,8 +66,10 @@ def add_notification(text,user_id):
 		return ("Subreddit is either invalid or not allowed (or Reddit is down).")
 	if not (query_type == 'title' or query_type == 'author'):
 		return "Query type must be title or author."
-	if not rdt.validate_search_query(query):
+	if query_type == 'title' and not rdt.validate_search_query(query):
 		return "Not a valid search query."
+	elif query_type == 'author' and not query.isalpha():
+		return "Not a valid author name."
 
 	new_notification = {'sub':split_text[0],'type':split_text[1],'query':split_text[2]}
 	settings_io.add_config_item(get_user_path(user_id),new_notification)
@@ -116,14 +118,14 @@ def get_all_notifications(path='users'):
 		# this shouldn't happen, as path is created on startup
 		return {}
 	notification_dict = {}
-	users = [f for f in os.listdir(path) if not os.path.isfile(os.path.join(path,f))]
+	users = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f))]
 	for user in users:
-		curr_user = read_notifications(get_user_path(user,path))
+		curr_user = read_notifications(user)
 		for curr_entry in curr_user:
 			if curr_entry['sub'] in notification_dict:
-				notification_dict[curr_entry['sub']].append(append_user_to_dict(curr_entry,file))
+				notification_dict[curr_entry['sub']].append(append_user_to_dict(curr_entry,user))
 			else:
-				notification_dict[curr_entry['sub']] = [append_user_to_dict(curr_entry,file)]
+				notification_dict[curr_entry['sub']] = [append_user_to_dict(curr_entry,user)]
 	return notification_dict
 
 def validate_user(user_id):
@@ -140,7 +142,7 @@ def initialize_user(user_id):
 		try:
 			open(get_user_path(user_id),'a').close()
 			return "Successfully initialized!"
-		except:
+		except Exception as e:
 			return "Something went wrong with initialization, please contact my owner."
 
 def deinitialize_user(user_id):
@@ -148,5 +150,5 @@ def deinitialize_user(user_id):
 	try:
 		os.remove(get_user_path(user_id))
 		return "Removed your list!"
-	except:
+	except Exception as e:
 		return "Something went wrong with removal, please contact my owner."
