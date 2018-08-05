@@ -30,11 +30,16 @@ logger.addHandler(handler)
 # TODO: better way of handling commands?
 # TODO: welcome message for people joining server (would have to be a separate 'bot' I suppose)
 # TODO: prevent the same alert from being added twice
-# TODO: validate input for author (should be one word)
+# TODO: validate input for author (should be one word, alphanumeric, etc)
 # TODO: catalog already-checked post ids and check more than just past minute (ignoring previously checked posts)
-# TODO: don't need to access auth file repeatedly; only reading once on startup should work (maybe re-read when restarting bot)
 # TODO: !restart
 # TODO: timing changes based on subreddit
+# TODO: max # of queries per user
+# TODO: limit on command speed per user (to avoid hitting discord limits)
+# TODO: check if commands queue properly
+# TODO: URL query type
+# TODO: add time last checked dictionary for subreddits, globally in reddit_fetcher, remove time records in main loop
+# TODO: global notification queue?
 
 class MyClient(discord.Client):
 	async def on_message(self,message):
@@ -78,7 +83,7 @@ def send_help():
 	**!add [subreddit] [title|author] [search query]**
 	\tadds an alert
 	\tsearch query is of form [word1 word2 word3] (without brackets)
-	\tmatch exact phrases by wrapping words like ["word1 word2" word3]
+	\tmatch phrases by wrapping words with quotes, e.g. ["word1 word2" word3]
 	\tprevent matching words by prefixing them with -, e.g. [word1 word2 -word3]
 	\texample usage: !add buildapcsales title nvidia gpu
 	**!remove [n]**
@@ -92,17 +97,17 @@ async def run_command(message):
 	if command[0] == '!help':
 		return send_help()
 	elif command[0] == '!initialize':
-		return notif.initialize_user(str(message.channel.id))
-	elif not notif.validate_user(str(message.channel.id)):
+		return notif.initialize_user(str(message.author.id))
+	elif not notif.validate_user(str(message.author.id)):
 		return 'Type !help for help!'
 	elif command[0] == '!list':
-		return notif.list_notifications(str(message.channel.id))
+		return notif.list_notifications(str(message.author.id))
 	elif command[0] == '!add':
-		return notif.add_notification(" ".join(command[1:]),str(message.channel.id))
+		return notif.add_notification(" ".join(command[1:]),str(message.author.id))
 	elif command[0] == '!remove':
-		return notif.remove_notification(command[1],str(message.channel.id))
+		return notif.remove_notification(command[1],str(message.author.id))
 	elif command[0] == '!deinitialize':
-		return notif.deinitialize_user(str(message.channel.id))
+		return notif.deinitialize_user(str(message.author.id))
 	elif command[0] == '!stop' and str(message.author) == get_discord_admin():
 		await client.send_message(message.channel,'See you later!')
 		return await client_exit()
@@ -127,7 +132,7 @@ def split_message(message,CHUNK_SIZE):
 	return messages
 
 async def message_channel(channel,message_text):
-	'''Sends a message to a channel.
+	'''Sends a message to a channel (channel can also be a user).
 	If message is too long, splits message based on CHUNK_SIZE.'''
 	CHUNK_SIZE = 1999  # max message length allowed
 
@@ -146,7 +151,7 @@ async def message_user(user_id,message_text):
 	If message is too long, splits message first.'''
 	CHUNK_SIZE = 1999  # max message length allowed
 
-	channel = client.get_channel(user_id)
+	channel = client.get_user_info(user_id)
 	if channel is None:
 		logger.error("Failed to find user with id {}.".format(user_id))
 		return 0
@@ -164,24 +169,28 @@ async def client_exit():
 	await client.close()
 	return 0
 
+# TODO: remove dependence on completion of message_user()
 async def check_notifications_periodically():
 	'''Every 60 seconds + run time, checks notifications. Meant to run in an event loop.'''
 	notif.do_startup_routine()
 	await client.wait_until_ready()
-	start_time = datetime.utcnow()-timedelta(minutes=1)  # set initial start time
+	praw_instance = rdt.get_praw_instance(MY_AUTH['reddit api'])  # not sure if this ever needs to be refreshed?
+	TIMES_CHECKED = 0
 	while not (RESTART_FLAG or EXIT_FLAG):
 		while client.is_closed and not (RESTART_FLAG or EXIT_FLAG):  # wait for client to be open if no flags are set
 			logger.info("Client currently closed, waiting 15 seconds to check notifications.")
 			await asyncio.sleep(15)
 		end_time = datetime.utcnow()
 		try:
-			praw_instance = rdt.get_praw_instance(MY_AUTH['reddit api'])
-			# TODO: this is stupid, get notification by user (or have it in a data structure where users are roots)
+			TIMES_CHECKED += 1
 			all_notifications = notif.get_all_notifications()  # note that this is a dictionary
 			for curr_sub in all_notifications:
 				to_send = False
 				try:
-					to_send = rdt.check_one_subreddit(curr_sub,all_notifications[curr_sub],praw_instance,start_time,end_time)
+					if curr_sub not in LAST_CHECKED:
+						LAST_CHECKED[curr_sub] = datetime.utcnow() - timedelta(minutes=5)
+					to_send = rdt.check_one_subreddit(curr_sub,all_notifications[curr_sub],praw_instance,LAST_CHECKED[curr_sub],end_time)
+					LAST_CHECKED[curr_sub] = end_time
 				except Exception as e:
 					logger.exception("Failure to check reddit posts for {}.".format(curr_sub))
 				if to_send:
@@ -190,10 +199,9 @@ async def check_notifications_periodically():
 							await message_user(curr_user,"**New reddit post matching your alert!**\n{}".format(str(curr_post)))
 						except Exception as e:
 							logger.exception("Failed to send notification to user {}.".format(curr_user))
-			logger.info("Checked posts from {} to {}".format(start_time.strftime('%Y-%m-%d %H:%M:%S'),end_time.strftime('%Y-%m-%d %H:%M:%S')))
+			logger.info("({}) Checked posts until {}".format(TIMES_CHECKED,end_time.strftime('%Y-%m-%d %H:%M:%S')))
 		except Exception as e:
 			logger.exception("Issue checking notifications.")
-		start_time = end_time
 		await asyncio.sleep(60)  # I guess it doesn't matter if it checks exactly every minute
 	logger.info("Exit or restart flag found, closing notification checking loop.")
 	return
@@ -206,6 +214,7 @@ if __name__ == "__main__":
 
 	EXIT_FLAG = False  # changed via set_exit_flag()
 	RESTART_FLAG = False
+	LAST_CHECKED = {}
 
 	MY_AUTH = settings_io.Auth()
 
@@ -219,7 +228,7 @@ if __name__ == "__main__":
 			loop.create_task(check_notifications_periodically())
 			loop.run_until_complete(client.start(get_discord_token()))
 		except Exception as e:
-			logger.exception("Discord bot exited with an exception.")
+			logger.exception("Discord bot exited with an exception. Restarting, probably.")
 		if not (RESTART_FLAG or EXIT_FLAG):
 			RESTART_FLAG = True  # if it reaches this point, the client exited for some unknown reason, so restart
 		if not client.is_closed:
