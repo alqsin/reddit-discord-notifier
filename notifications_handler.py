@@ -34,7 +34,7 @@ def is_integer(x):
 	'''Returns true if x can be cast to integer; else returns False.'''
 	try:
 		int(x)
-	except:
+	except Exception:
 		return False
 	return True
 

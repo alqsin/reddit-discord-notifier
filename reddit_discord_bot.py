@@ -151,12 +151,9 @@ async def message_user(user_id,message_text):
 	If message is too long, splits message first.'''
 	CHUNK_SIZE = 1999  # max message length allowed
 
-	channel = client.get_user_info(user_id)
-	if channel is None:
-		logger.error("Failed to find user with id {}.".format(user_id))
-		return 0
+	user = discord.utils.get(client.get_all_members(), id=user_id)
 
-	return await message_channel(channel,message_text)
+	return await message_channel(user,message_text)
 	
 async def test(message):
 	return 'This is a test!'
