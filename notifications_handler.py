@@ -2,34 +2,6 @@ import settings_io
 import os
 import reddit_fetcher as rdt
 
-# class Notification:
-# 	def __init__(self,text,user=None):
-# 		self.text = text
-# 		self.user = user
-# 	def __str__(self):
-# 		return "Subreddit: /r/{}\nType: {}\nQuery: {}\n".format(self.get_subreddit(),self.get_type(),self.get_query())
-# 	def get_subreddit(self):
-# 		return self.text.split(' ',2)[0]
-# 	def get_type(self):
-# 		return self.text.split(' ',2)[1]
-# 	def get_query(self):
-# 		return self.text.split(' ',2)[2]
-# 	def get_text(self):
-# 		return self.text
-# 	def is_valid():
-# 		'''Returns 1 if notification is valid, else returns a string
-# 		with reason for notification being invalid.'''
-# 		if not len(self.text.split(' ')) >= 3:
-# 			return "Invalid notification format."
-# 		if not rdt.validate_subreddit(self.get_subreddit()):
-# 			return "Subreddit is invalid or not allowed (or Reddit is down)."
-# 		if not (self.get_type() == 'title' or self.get_type() == 'author'):
-# 			return "Query type must be title or author."
-# 		if not rdt.validate_search_query(self.get_query()):
-# 			return "Not a valid search query."
-# 		return True
-
-
 def is_integer(x):
 	'''Returns true if x can be cast to integer; else returns False.'''
 	try:
