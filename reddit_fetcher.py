@@ -152,3 +152,17 @@ def validate_subreddit(subreddit_name,reddit=get_praw_instance(read_reddit_auth(
 	if subreddit_name in settings_io.open_file_as_list(allowed_subreddits_file):
 		return True
 	return False
+
+def validate_author(author):
+	'''Checks if an author is valid.'''
+	if author is None:
+		return False
+	if not isinstance(author, str):
+		return False
+	if ' ' in author:
+		return False
+
+	user_rx = re.compile(r'\A[\w-]+\Z', re.UNICODE)  # from reddit-archive github
+	if not user_rx:
+		return False
+	return True

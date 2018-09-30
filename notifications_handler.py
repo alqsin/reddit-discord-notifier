@@ -40,8 +40,8 @@ def add_notification(text,user_id):
 		return "Query type must be title or author."
 	if query_type == 'title' and not rdt.validate_search_query(query):
 		return "Not a valid search query."
-	elif query_type == 'author' and not query.isalpha():
-		return "Not a valid author name."
+	elif query_type == 'author' and not rdt.validate_author(query):
+		return "Not a valid reddit username."
 
 	new_notification = {'sub':split_text[0],'type':split_text[1],'query':split_text[2]}
 	settings_io.add_config_item(get_user_path(user_id),new_notification)
