@@ -35,7 +35,7 @@ def validate_search_query(search_query):
     '''Checks if search_query is valid by performing test search.'''
     try:
         match_string(search_query,"this is a test")
-    except Exception as e:
+    except Exception:
         return False
     return True
 
@@ -142,12 +142,12 @@ def validate_subreddit(subreddit_name,reddit=get_praw_instance(read_reddit_auth(
         try:
             i = 1
             posts = reddit.subreddit(subreddit_name).new(limit=10)
-            for post in posts:
+            for _ in posts:
                 i += 1
             if i < 10:
                 return False
             return True
-        except Exception as e:
+        except Exception:
             return False
     if subreddit_name in settings_io.open_file_as_list(allowed_subreddits_file):
         return True

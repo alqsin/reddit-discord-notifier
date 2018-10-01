@@ -114,7 +114,7 @@ def initialize_user(user_id):
         try:
             open(get_user_path(user_id),'a').close()
             return "Successfully initialized!"
-        except Exception as e:
+        except Exception:
             return "Something went wrong with initialization, please contact my owner."
 
 def deinitialize_user(user_id):
@@ -122,5 +122,5 @@ def deinitialize_user(user_id):
     try:
         os.remove(get_user_path(user_id))
         return "Removed your list!"
-    except Exception as e:
+    except Exception:
         return "Something went wrong with removal, please contact my owner."

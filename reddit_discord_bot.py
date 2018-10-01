@@ -54,7 +54,7 @@ class MyClient(discord.Client):
                     return
                 else:
                     await message_channel(message.channel,result)
-            except Exception as e:
+            except Exception:
                 logger.exception("Issue running following command: {}.".format(message.content))
                 await client.send_message(message.channel,"Error occurred, if you'd like, please complain in #help.")
                 # here we want to message the admin or something
@@ -149,7 +149,6 @@ async def message_channel(channel,message_text):
 async def message_user(user_id,message_text):
     '''Sends a private message to user with id user_id.
     If message is too long, splits message first.'''
-    CHUNK_SIZE = 1999  # max message length allowed
 
     user = discord.utils.get(client.get_all_members(), id=user_id)
 
@@ -188,16 +187,16 @@ async def check_notifications_periodically():
                         LAST_CHECKED[curr_sub] = datetime.utcnow() - timedelta(minutes=5)
                     to_send = rdt.check_one_subreddit(curr_sub,all_notifications[curr_sub],praw_instance,LAST_CHECKED[curr_sub],end_time)
                     LAST_CHECKED[curr_sub] = end_time
-                except Exception as e:
+                except Exception:
                     logger.exception("Failure to check reddit posts for {}.".format(curr_sub))
                 if to_send:
                     for (curr_user,curr_post) in to_send:
                         try:
                             await message_user(curr_user,"**New reddit post matching your alert!**\n{}".format(str(curr_post)))
-                        except Exception as e:
+                        except Exception:
                             logger.exception("Failed to send notification to user {}.".format(curr_user))
             logger.info("({}) Checked posts until {}".format(TIMES_CHECKED,end_time.strftime('%Y-%m-%d %H:%M:%S')))
-        except Exception as e:
+        except Exception:
             logger.exception("Issue checking notifications.")
         await asyncio.sleep(60)  # I guess it doesn't matter if it checks exactly every minute
     logger.info("Exit or restart flag found, closing notification checking loop.")
