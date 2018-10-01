@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime,timedelta
 import os
 import time  # for sleeping in body
+import textwrap  # for removing indentation from help message
 
 import discord
 import settings_io
@@ -73,23 +74,24 @@ def get_discord_admin():
     return MY_AUTH['discord']['admin']
 
 def send_help():
-    help_message = '''**Commands:**
-    **!initialize**
-    \tinitialize list; must be done to add/receive notifications
-    **!deinitialize**
-    \tdelete your list
-    **!list**
-    \tprovides a list of alerts
-    **!add [subreddit] [title|author] [search query]**
-    \tadds an alert
-    \tsearch query is of form [word1 word2 word3] (without brackets)
-    \tmatch phrases by wrapping words with quotes, e.g. ["word1 word2" word3]
-    \tprevent matching words by prefixing them with -, e.g. [word1 word2 -word3]
-    \texample usage: !add buildapcsales title nvidia gpu
-    **!remove [n]**
-    \tremoves alert n (use !list to see alert numbers)
-    '''
-    return help_message
+    help_message = '''\
+                   ```Commands:
+                   !initialize
+                   \tinitialize list; must be done to add/receive notifications
+                   !deinitialize
+                   \tdelete your list
+                   !list
+                   \tprovides a list of alerts
+                   !add [subreddit] [title|author] [search query]
+                   \tadds an alert
+                   \tsearch query is of form [word1 word2 word3] (without brackets)
+                   \tmatch phrases by wrapping words with quotes, e.g. ["word1 word2" word3]
+                   \tprevent matching words by prefixing them with -, e.g. [word1 word2 -word3]
+                   \texample usage: !add buildapcsales title nvidia gpu
+                   !remove [n]
+                   \tremoves alert n (use !list to see alert numbers)```\
+                   '''
+    return textwrap.dedent(help_message)
 
 async def run_command(message):
     '''Runs a command, with various checks to see if commands are valid.'''
