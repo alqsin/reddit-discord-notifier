@@ -135,7 +135,7 @@ def validate_subreddit(subreddit_name,reddit=get_praw_instance(read_reddit_auth(
     Second function will not work if reddit is down.'''
     allowed_subreddits_file = 'allowed_subreddits'
     
-    if not subreddit_name.isalpha():
+    if not isinstance(subreddit_name, str):
         return False
 
     if not os.path.exists(allowed_subreddits_file):
