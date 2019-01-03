@@ -98,6 +98,11 @@ async def run_command(message):
     command = message.content.lower().strip().split(' ')
     if command[0] == '!help':
         return send_help()
+    elif command[0] == '!stop' and str(message.author) == get_discord_admin():
+        await client.send_message(message.channel,'See you later!')
+        return await client_exit()
+    elif command[0] == '!test' and str(message.author) == get_discord_admin():
+        return await test(message)
     elif command[0] == '!initialize':
         return notif.initialize_user(str(message.author.id))
     elif not notif.validate_user(str(message.author.id)):
@@ -110,11 +115,6 @@ async def run_command(message):
         return notif.remove_notification(command[1],str(message.author.id))
     elif command[0] == '!deinitialize':
         return notif.deinitialize_user(str(message.author.id))
-    elif command[0] == '!stop' and str(message.author) == get_discord_admin():
-        await client.send_message(message.channel,'See you later!')
-        return await client_exit()
-    elif command[0] == '!test' and str(message.author) == get_discord_admin():
-        return await test(message)
     return 0
 
 def split_message(message,CHUNK_SIZE):
