@@ -1,9 +1,15 @@
-auth.ini
+# python cache
 __pycache__
-logs
-*test.py
-users
-users.ini
-!/TEMPLATE/*
-unused
+*.pyc
+
+# settings files
 allowed_subreddits
+auth.ini
+!/TEMPLATE/*
+
+# application storage
+logs
+users
+
+# virtual environment
+ENV
