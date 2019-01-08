@@ -29,8 +29,7 @@ def get_time_from_stamp(timestamp_utc):
 def read_reddit_auth():
     '''Reads reddit auth into dictionary with keys corresponding to praw values.
     Used when praw instance is not provided to function.'''
-    reddit_auth = settings_io.Auth()
-    return reddit_auth['reddit api']
+    return settings_io.read_auth()['reddit api']
 
 def validate_search_query(search_query):
     '''Checks if search_query is valid by performing test search.'''

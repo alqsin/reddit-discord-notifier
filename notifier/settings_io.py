@@ -1,16 +1,8 @@
 import configparser
 import os
 
-class Auth:
-    def __init__(self,AUTH_FILE='auth.ini'):
-        self.AUTH_FILE = AUTH_FILE
-        self.read_auth()
-    def __getitem__(self,key):
-        '''Returns a section from auth_dict.'''
-        return self.auth_dict[key]
-    def read_auth(self):
-        '''Refreshes stored auth.'''
-        self.auth_dict = read_config_as_dict(self.AUTH_FILE)
+def read_auth(AUTH_FILE='auth.ini'):
+    return read_config_as_dict(AUTH_FILE)
 
 def read_config_as_dict(file):
     '''Reads config file, using section names as keys and section contents
