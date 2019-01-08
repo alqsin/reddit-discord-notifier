@@ -10,16 +10,17 @@ import logging
 logger = logging.getLogger()
 
 class RedditPost:
-    def __init__(self,post_id,post_title,post_time,post_url,post_author):
-        self.post_id = post_id
-        self.post_title = post_title
-        self.post_time = post_time
-        self.post_url = post_url
-        self.post_author = post_author
+    def __init__(self, submission):
+        '''Takes a praw submission and retrieves some relevant metadata.'''
+        self.post_id = submission.fullname
+        self.post_title = submission.title
+        self.post_time = get_time_from_stamp(submission.created_utc)
+        self.post_url = 'https://www.reddit.com' + submission.permalink
+        self.post_author = submission.author
     def __eq__(self,other):
         return self.post_id == other.post_id
     def __str__(self):
-        return "{}\n{}\n".format(self.post_title,self.post_url)
+        return "{}\n{}\n".format(self.post_title, self.post_url)
 
 def get_time_from_stamp(timestamp_utc):
     '''Converts UTC timestamp to a readable time (still in UTC)'''
@@ -83,16 +84,10 @@ def get_reddit_posts(subreddit_name,reddit,start_time,end_time):
     new_submissions = []
 
     for submission in subreddit.new(limit=NUMBER_NEW_TO_GET):
-        post_time = get_time_from_stamp(submission.created_utc) #submission.created_utc returns unix timestamp in utc
-        post_title = submission.title
-        post_id = submission.fullname
-        post_author = submission.author
-        post_url = 'https://www.reddit.com' + submission.permalink  # consider checking for presence of https in case they change how this works in future
-        # consider adding score, body, etc.
-        current_post = RedditPost(post_id=post_id,post_title=post_title,post_time=post_time,post_url=post_url,post_author=post_author)
-        if (post_time) > end_time:
+        current_post = RedditPost(submission)
+        if (current_post.post_time) > end_time:
             continue
-        elif (post_time < start_time): #doesn't bother parsing if submission is too old
+        elif (current_post.post_time < start_time): #doesn't bother parsing if submission is too old
             break
         else:
             new_submissions.append(current_post)
@@ -126,7 +121,7 @@ def check_one_subreddit(subreddit_name,notifications,reddit,start_time,end_time)
     return notifications_to_send  # note that this is an array of pairs of type (str,RedditPost)
 
 def get_praw_instance(reddit_auth):
-    '''Uses auth.ini to create an instance of praw.'''
+    '''Uses reddit_auth, a dictionary, to create an instance of praw.'''
     return praw.Reddit(**reddit_auth)
 
 def validate_subreddit(subreddit_name,reddit=get_praw_instance(read_reddit_auth())):
@@ -162,7 +157,8 @@ def validate_author(author):
     if ' ' in author:
         return False
 
-    user_rx = re.compile(r'\A[\w-]+\Z', re.UNICODE)  # from reddit-archive github
+    # regex from reddit-archive github
+    user_rx = re.compile(r'\A[\w-]+\Z', re.UNICODE)
     if not user_rx:
         return False
     return True
