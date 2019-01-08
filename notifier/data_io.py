@@ -1,6 +1,6 @@
 import settings_io
 import os
-import reddit_fetcher as rdt
+import reddit_io as rdt
 
 def is_integer(x):
     '''Returns true if x can be cast to integer; else returns False.'''

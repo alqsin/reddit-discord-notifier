@@ -5,8 +5,8 @@ import time  # for sleeping in body
 
 import discord
 import settings_io
-import notifications_handler as notif
-import reddit_fetcher as rdt
+import data_io
+import reddit_io as rdt
 
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -103,17 +103,17 @@ async def run_command(message):
     elif command[0] == '!test' and str(message.author) == get_discord_admin():
         return await test(message)
     elif command[0] == '!initialize':
-        return notif.initialize_user(str(message.author.id))
-    elif not notif.validate_user(str(message.author.id)):
+        return data_io.initialize_user(str(message.author.id))
+    elif not data_io.validate_user(str(message.author.id)):
         return 'Type !help for help!'
     elif command[0] == '!list':
-        return notif.list_notifications(str(message.author.id))
+        return data_io.list_notifications(str(message.author.id))
     elif command[0] == '!add':
-        return notif.add_notification(" ".join(command[1:]),str(message.author.id))
+        return data_io.add_notification(" ".join(command[1:]),str(message.author.id))
     elif command[0] == '!remove':
-        return notif.remove_notification(command[1],str(message.author.id))
+        return data_io.remove_notification(command[1],str(message.author.id))
     elif command[0] == '!deinitialize':
-        return notif.deinitialize_user(str(message.author.id))
+        return data_io.deinitialize_user(str(message.author.id))
     return 0
 
 def split_message(message,CHUNK_SIZE):
@@ -168,7 +168,7 @@ async def client_exit():
 
 async def check_notifications_periodically():
     '''Every 60 seconds + run time, checks notifications. Meant to run in an event loop.'''
-    notif.do_startup_routine()
+    data_io.do_startup_routine()
     await client.wait_until_ready()
     praw_instance = rdt.get_praw_instance(MY_AUTH['reddit api'])  # not sure if this ever needs to be refreshed?
     TIMES_CHECKED = 0
@@ -179,7 +179,7 @@ async def check_notifications_periodically():
         end_time = datetime.utcnow()
         try:
             TIMES_CHECKED += 1
-            all_notifications = notif.get_all_notifications()  # note that this is a dictionary
+            all_notifications = data_io.get_all_notifications()  # note that this is a dictionary
             for curr_sub in all_notifications:
                 to_send = False
                 try:
