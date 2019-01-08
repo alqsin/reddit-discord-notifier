@@ -2,7 +2,6 @@ import asyncio
 from datetime import datetime,timedelta
 import os
 import time  # for sleeping in body
-import textwrap  # for removing indentation from help message
 
 import discord
 import settings_io
@@ -14,7 +13,7 @@ from logging.handlers import TimedRotatingFileHandler
 
 log_dir = 'logs/'
 if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
+    os.makedirs(log_dir)
 
 formatter = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s')
 
@@ -74,24 +73,24 @@ def get_discord_admin():
     return MY_AUTH['discord']['admin']
 
 def send_help():
-    help_message = '''\
-                   ```Commands:
-                   !initialize
-                   \tinitialize list; must be done to add/receive notifications
-                   !deinitialize
-                   \tdelete your list
-                   !list
-                   \tprovides a list of alerts
-                   !add [subreddit] [title|author] [search query]
-                   \tadds an alert
-                   \tsearch query is of form [word1 word2 word3] (without brackets)
-                   \tmatch phrases by wrapping words with quotes, e.g. ["word1 word2" word3]
-                   \tprevent matching words by prefixing them with -, e.g. [word1 word2 -word3]
-                   \texample usage: !add buildapcsales title nvidia gpu
-                   !remove [n]
-                   \tremoves alert n (use !list to see alert numbers)```\
-                   '''
-    return textwrap.dedent(help_message)
+    help_message = '''```Commands:
+    !initialize
+    \tinitialize list; must be done to add/receive notifications
+    !deinitialize
+    \tdelete your list
+    !list
+    \tprovides a list of alerts
+    !add [subreddit] [title|author] [search query]
+    \tadds an alert
+    \tsearch query is of form [word1 word2 word3] (without brackets)
+    \tmatch phrases by wrapping words with quotes, e.g. ["word1 word2" word3]
+    \tprevent matching words by prefixing them with -, e.g. [word1 word2 -word3]
+    \texample usage: !add buildapcsales title nvidia gpu
+    !remove [n]
+    \tremoves alert n (use !list to see alert numbers)```'''
+
+    help_message = help_message.replace('\n    ','\n')
+    return help_message
 
 async def run_command(message):
     '''Runs a command, with various checks to see if commands are valid.'''
@@ -143,7 +142,7 @@ async def message_channel(channel,message_text):
     else:
         messages = split_message(message_text,CHUNK_SIZE)
         if messages is None:
-            await client.send_message(channel,'Message was too long to send. If there\'s no reason for this, go complain in #help.')
+            await client.send_message(channel,"Message was too long to send. If there's no reason for this, go complain in #help.")
         for message in messages:
             await client.send_message(channel,message)
     return 0
@@ -167,7 +166,6 @@ async def client_exit():
     await client.close()
     return 0
 
-# TODO: remove dependence on completion of message_user()
 async def check_notifications_periodically():
     '''Every 60 seconds + run time, checks notifications. Meant to run in an event loop.'''
     notif.do_startup_routine()
@@ -228,7 +226,7 @@ if __name__ == "__main__":
         except Exception as e:
             logger.exception("Discord bot exited with an exception. Restarting, probably.")
         if not (RESTART_FLAG or EXIT_FLAG):
-            RESTART_FLAG = True  # if it reaches this point, the client exited for some unknown reason, so restart
+            RESTART_FLAG = True  # the client exited for some unknown reason, so restart
         if not client.is_closed:
             logger.info("Closing and restarting client.")
             client.close()
