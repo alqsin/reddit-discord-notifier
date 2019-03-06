@@ -10,7 +10,23 @@ import reddit_io as rdt
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
-async def check_notifications_periodically(client):
+def get_main_logger():
+    formatter = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s')
+
+    handler = TimedRotatingFileHandler(
+        os.path.join(log_dir,'main.log'),
+        when="midnight", interval=1
+    )
+    handler.setFormatter(formatter)
+    handler.suffix = "%Y%m%d"
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.addHandler(handler)
+
+    return logger
+
+async def check_notifications_periodically(client, logger, LAST_CHECKED):
     '''Every 60 seconds + run time, checks notifications. Meant to run in an event loop.'''
     data_io.do_startup_routine()
     await client.wait_until_ready()
@@ -52,19 +68,7 @@ if __name__ == "__main__":
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    formatter = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s')
-
-    # set main logger
-    handler = TimedRotatingFileHandler(
-        os.path.join(log_dir,'main.log'),
-        when="midnight", interval=1
-    )
-    handler.setFormatter(formatter)
-    handler.suffix = "%Y%m%d"
-
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    logger.addHandler(handler)
+    logger = get_main_logger()
 
     LAST_CHECKED = {}
 
@@ -75,7 +79,7 @@ if __name__ == "__main__":
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             client = discord_io.PMClient(logger)
-            loop.create_task(check_notifications_periodically(client))
+            loop.create_task(check_notifications_periodically(client, logger, LAST_CHECKED))
             loop.run_until_complete(client.start())
         except Exception as e:
             logger.exception("Discord bot exited with an exception. Restarting, probably.")
