@@ -15,12 +15,11 @@ class PMClient(discord.Client):
         return await super().start(self.AUTH['discord']['token'])
 
     async def on_message(self, message):
-        if not message.channel.is_private:
-            pass
+        if not isinstance(message.channel, discord.DMChannel):
+            return
         elif (message.content.lower() == 'hi' or
               message.content.lower() == 'hello'):
-            await self.send_message(
-                message.channel,'Hello {}'.format(str(message.author)))
+            await message.channel.send('Hello {}'.format(str(message.author)))
         elif message.content.startswith('!'):
             try:
                 result = await self.run_command(message)
@@ -31,8 +30,7 @@ class PMClient(discord.Client):
             except Exception:
                 self.logger.exception(
                     "Issue running following command: {}.".format(message.content))
-                await self.send_message(
-                    message.channel,
+                await message.channel.send(
                     "Some error occurred while processing your command.")
 
     async def on_ready(self):
@@ -48,23 +46,26 @@ class PMClient(discord.Client):
         CHUNK_SIZE = 1999  # max message length allowed
 
         if len(message_text) <= CHUNK_SIZE:
-            await self.send_message(channel,message_text)
+            await channel.send(message_text)
         else:
             messages = split_message(message_text,CHUNK_SIZE)
             if messages is None:
-                await self.send_message(channel,
-                    "Message was too long to send."
+                await channel.send("Message was too long to send."
                     "If there's no reason for this, go complain in #help.")
+                return 0
             for message in messages:
-                await self.send_message(channel,message)
-        return 0
+                await channel.send(message)
+        return 1
 
     async def message_user(self, user_id, message_text):
         '''Sends a private message to user with id user_id.
         If message is too long, splits message first.'''
-        user = discord.utils.get(self.get_all_members(), id=user_id)
+        user = self.get_user(user_id)
 
-        return await self.message_channel(user,message_text)
+        if user is not None:
+            return await self.message_channel(user, message_text)
+
+        return 0
 
     async def run_command(self, message):
         '''Runs a command, with various checks to see if commands are valid.'''
@@ -72,7 +73,7 @@ class PMClient(discord.Client):
         if command[0] == '!help':
             return send_help()
         elif command[0] == '!stop' and str(message.author) == self.AUTH['discord']['admin']:
-            await self.send_message(message.channel,'See you later!')
+            await message.channel.send('See you later!')
             return await self.exit()
         elif command[0] == '!test' and str(message.author) == self.AUTH['discord']['admin']:
             return await self.test(message)
