@@ -79,9 +79,9 @@ def list_notifications(user_id):
         i += 1
     return notif_str
 
-def append_user_to_dict(notification,user_path):
+def append_user_to_dict(notification, user_id):
     notification = notification.copy()
-    notification['user'] = os.path.basename(user_path)
+    notification['user'] = user_id
     return notification
 
 def get_all_notifications(path='users'):
@@ -92,12 +92,16 @@ def get_all_notifications(path='users'):
     notification_dict = {}
     users = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f))]
     for user in users:
+        if not is_integer(user):
+            # ???
+            continue
+        user_id = int(user)
         curr_user = read_notifications(user)
         for curr_entry in curr_user:
             if curr_entry['sub'] in notification_dict:
-                notification_dict[curr_entry['sub']].append(append_user_to_dict(curr_entry,user))
+                notification_dict[curr_entry['sub']].append(append_user_to_dict(curr_entry,user_id))
             else:
-                notification_dict[curr_entry['sub']] = [append_user_to_dict(curr_entry,user)]
+                notification_dict[curr_entry['sub']] = [append_user_to_dict(curr_entry,user_id)]
     return notification_dict
 
 def validate_user(user_id):

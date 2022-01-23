@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime,timedelta
 import os
-import time  # for sleeping in body
+from contextlib import suppress
 
 import discord_io
 import data_io
@@ -31,21 +31,24 @@ async def check_notifications_periodically(client, logger, LAST_CHECKED):
     data_io.do_startup_routine()
     await client.wait_until_ready()
     praw_instance = rdt.get_praw_instance(client.AUTH['reddit api'])
-    TIMES_CHECKED = 0
+
+    end_time = datetime.utcnow() - timedelta(minutes=1)
+
     while not (client.RESTART_FLAG or client.EXIT_FLAG):
         # wait for client to be open if no flags are set
-        while client.is_closed and not (client.RESTART_FLAG or client.EXIT_FLAG):
-            logger.info("Client is closed, waiting 15 seconds.")
-            await asyncio.sleep(15)
+        if (datetime.utcnow() - end_time).seconds < 60 or (
+                client.is_closed() and not (client.RESTART_FLAG or client.EXIT_FLAG)):
+            await asyncio.sleep(1)
+            continue
+
         end_time = datetime.utcnow()
         try:
-            TIMES_CHECKED += 1
             all_notifications = data_io.get_all_notifications()  # note that this is a dictionary
             for curr_sub in all_notifications:
                 to_send = False
                 try:
                     if curr_sub not in LAST_CHECKED:
-                        LAST_CHECKED[curr_sub] = datetime.utcnow() - timedelta(minutes=5)
+                        LAST_CHECKED[curr_sub] = datetime.utcnow() - timedelta(minutes=1)
                     to_send = rdt.check_one_subreddit(curr_sub,all_notifications[curr_sub],praw_instance,LAST_CHECKED[curr_sub],end_time)
                     LAST_CHECKED[curr_sub] = end_time
                 except Exception:
@@ -56,10 +59,10 @@ async def check_notifications_periodically(client, logger, LAST_CHECKED):
                             await client.message_user(curr_user,"**New reddit post matching your alert!**\n{}".format(str(curr_post)))
                         except Exception:
                             logger.exception("Failed to send notification to user {}.".format(curr_user))
-            logger.info("({}) Checked posts until {}".format(TIMES_CHECKED,end_time.strftime('%Y-%m-%d %H:%M:%S')))
+            logger.info("Checked posts until {}".format(end_time.strftime('%Y-%m-%d %H:%M:%S')))
         except Exception:
             logger.exception("Issue checking notifications.")
-        await asyncio.sleep(60)  # I guess it doesn't matter if it checks exactly every minute
+
     logger.info("Exit or restart flag found, closing notification checking loop.")
     return
 
@@ -73,23 +76,29 @@ if __name__ == "__main__":
     LAST_CHECKED = {}
 
     client = None
+    loop = None
 
     while client is None or not client.EXIT_FLAG or client.RESTART_FLAG:
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             client = discord_io.PMClient(logger)
-            loop.create_task(check_notifications_periodically(client, logger, LAST_CHECKED))
+            notif_task = loop.create_task(check_notifications_periodically(client, logger, LAST_CHECKED))
             loop.run_until_complete(client.start())
         except Exception as e:
             logger.exception("Discord bot exited with an exception. Restarting, probably.")
-        if not (client.RESTART_FLAG or client.EXIT_FLAG):
-            client.RESTART_FLAG = True  # the client exited for some unknown reason, so restart
-        if not client.is_closed:
-            logger.info("Closing and restarting client.")
-            client.close()
-        if not loop.is_closed():
-            logger.info("Closing and restarting loop.")
+        finally:
+            if not (client.RESTART_FLAG or client.EXIT_FLAG):
+                client.RESTART_FLAG = True  # the client exited for some unknown reason, so restart
+
+            if not client.is_closed():
+                logger.info("Closing client.")
+                loop.run_until_complete(client.close())
+
+            logger.info("Closing loop.")
+            notif_task.cancel()
+            with suppress(asyncio.CancelledError):
+                loop.run_until_complete(notif_task)
             loop.close()
 
     logger.info("Reached end of program.")

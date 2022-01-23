@@ -64,7 +64,16 @@ class PMClient(discord.Client):
 
         if user is not None:
             return await self.message_channel(user, message_text)
+        
+        try:
+            user =  await self.fetch_user(user_id)
+            return await self.message_channel(user, message_text)
+        except discord.NotFound:
+            self.logger.info("User with ID does not exist?")
+        except discord.HTTPException:
+            self.logger.info("Fetching user failed due to network issue.")
 
+        self.logger.info("Couldn't find user with id {}.".format(user_id))
         return 0
 
     async def run_command(self, message):
@@ -96,10 +105,11 @@ class PMClient(discord.Client):
 
     async def exit(self):
         '''Sets event loop exit flag and shuts down discord connection.'''
-        self.EXIT_FLAG = True
         self.logger.info("Shutting down.")
-        await asyncio.sleep(90)
+
         await self.close()
+        self.EXIT_FLAG = True
+
         return 0
 
 def send_help():
